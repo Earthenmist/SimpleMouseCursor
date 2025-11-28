@@ -92,12 +92,6 @@ No reload required.
 
 ---
 
-## 📸 Screenshots
-
-> *Add your screenshots here to show examples of the rings, reticle styles, and configuration panel.*
-
----
-
 ## 📝 Known Limitations
 
 - **Midnight Beta:**  
