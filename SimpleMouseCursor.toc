@@ -4,8 +4,11 @@
 ## Author: Lanni-Alonsus
 ## Version: 0.3a
 
+## IconTexture: Interface\AddOns\SimpleMouseCursor\Images\SimpleMouseCursorLogo.tga
+## DefaultState: Enabled
 ## SavedVariables: SMC_Settings
 
 SimpleMouseCursor.xml
 SimpleMouseCursor.lua
+
 SMC_Settings.lua
