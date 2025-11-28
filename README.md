@@ -5,7 +5,7 @@ A lightweight, standalone addon that enhances cursor visibility during gameplay 
 Originally based on a popular WeakAura concept, rebuilt from scratch as a more performant and reliable addon with **zero dependencies**.
 
 <p align="center">
-  <img src="logo.png" width="256" alt="Simple Mouse Cursor Logo">
+  <img src="Image/logo.png" width="256" alt="Simple Mouse Cursor Logo">
 </p>
 
 ---
