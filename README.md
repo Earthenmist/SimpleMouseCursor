@@ -65,15 +65,12 @@ Originally based on a popular WeakAura concept, rebuilt from scratch as a more p
    ```
 4. Restart WoW or reload UI (`/reload`).
 
-### CurseForge / Wago
-*Coming soon.*  
-Once published, users will be able to install via CurseForge, WowUp, or Wago Addons.
-
 ---
 
 ## ⚙️ Configuration
 
 Open options in-game:  
+  
 ```
 Esc → Options → AddOns → Simple Mouse Cursor
 ```
@@ -89,15 +86,13 @@ All settings update instantly:
 - And more  
 
 No reload required.
-
+  
 ---
 
 ## 📝 Known Limitations
-
-- **Midnight Beta:**  
-  The client currently blocks certain events, so GCD, Health, and Power indicators are not functional.
-
----
+  
+-   
+---  
 
 ## 🧩 Roadmap
 - Additional reticle styles  
