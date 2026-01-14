@@ -102,7 +102,7 @@ function SMC:GetClassColor(ringType)
     return 1.0, 1.0, 1.0
 end
 
--- Apply the current class / power colours to all active ring frames.
+-- Apply the current class/power colours to all active ring frames.
 function SMC:UpdateRingColors()
     if SMC.GCDCooldownFrame then
         local r, g, b = SMC:GetClassColor("gcd")
@@ -143,7 +143,7 @@ function SMC:UpdateReticle()
         local globalScale = SMC_Settings.reticleScale or 1.0
         SMC_CursorFrame.Reticle:SetScale(reticleInfo.scale * globalScale)
         
-        -- Apply class color if enabled
+        -- Apply class colour if enabled
         if SMC_Settings.useReticleClassColor then
             local _, class = UnitClass("player")
             local classColor = C_ClassColor.GetClassColor(class)
@@ -412,29 +412,35 @@ function SMC:PlayCrosshairAnimation()
     SMC.CrosshairFrame:Show()
 end
 
--- Kick off the global cooldown swipe animation on the GCD ring.
+-- Start the GCD swipe animation.
 function SMC:StartGCDAnimation(startTime, duration)
-    if CURRENT_API >= 120000  then return end
     if not SMC.enableGCD then return end
     if SMC.isGCDAnimating then return end
 
     SMC.isGCDAnimating = true
 
     local cooldownFrame = SMC.GCDCooldownFrame
-
     cooldownFrame:Show()
-    cooldownFrame:SetCooldown(startTime, duration) 
+    cooldownFrame:SetCooldown(startTime, duration)
+
+    -- Midnight (12.0+) may provide Secret Values for time/duration. Avoid arithmetic; rely on CooldownFrame completion.
+    if (issecretvalue and (issecretvalue(startTime) or issecretvalue(duration))) or (CURRENT_API and CURRENT_API >= 120000) then
+        cooldownFrame:SetScript("OnCooldownDone", function()
+            cooldownFrame:Hide()
+            SMC.isGCDAnimating = false
+        end)
+        return
+    end
 
     local function GCDUpdate(self, elapsed)
-
         local elapsedCD = GetTime() - startTime
         local remaining = duration - elapsedCD -- Don't max with 0 yet
 
-        if remaining <= -0.25 then -- Wait a tiny bit after it finishes
-            cooldownFrame:SetCooldown(0, 0) 
+        if remaining <= -0.25 then -- Wait a tiny bit
             cooldownFrame:Hide()
-
-            SMC.isGCDAnimating = false 
+            SMC.isGCDAnimating = false
+            SMC_CursorFrame:SetScript("OnUpdate", nil)
+            cooldownFrame:SetScript("OnCooldownDone", nil)
         end
     end
 
@@ -477,16 +483,52 @@ end
 
 -- Recompute and redraw the health ring based on the player's health.
 function SMC:UpdateHealthRing()
-    if CURRENT_API >= 120000 then return end
     local healthFrame = SMC.HealthFrame
     if not healthFrame then return end
 
-    local currentHealth = UnitHealth("player")
     local maxHealth = UnitHealthMax("player")
+    if not maxHealth or maxHealth == 0 then return end
 
-    if maxHealth == 0 then return end
+    local healthPercent
 
-    local healthPercent = currentHealth / maxHealth
+    -- Midnight (12.0+) may return Secret Values for UnitHealth/UnitPower on tainted paths.
+    -- We must avoid doing arithmetic on secrets. Prefer the new percent APIs, then fallback to GUID-based percent.
+    local currentHealth = UnitHealth("player")
+    if issecretvalue and issecretvalue(currentHealth) then
+        if UnitHealthPercent then
+            local p = UnitHealthPercent("player")
+            if not (issecretvalue and issecretvalue(p)) and type(p) == "number" then
+                healthPercent = p
+            end
+        end
+
+        if not healthPercent and UnitPercentHealthFromGUID then
+            local guid = UnitGUID("player")
+            if guid then
+                local p = UnitPercentHealthFromGUID(guid)
+                if not (issecretvalue and issecretvalue(p)) and type(p) == "number" then
+                    -- Some APIs return 0..100, others 0..1. Normalize.
+                    if p > 1 then p = p / 100 end
+                    healthPercent = p
+                end
+            end
+        end
+    else
+        -- Non-secret path (Retail/Classic, or untainted context)
+        if type(currentHealth) == "number" then
+            healthPercent = currentHealth / maxHealth
+        end
+    end
+
+    if not healthPercent then
+        -- Can't safely compute; hide ring rather than erroring.
+        healthFrame:SetCooldown(0, 0)
+        return
+    end
+
+    if healthPercent < 0 then healthPercent = 0 end
+    if healthPercent > 1 then healthPercent = 1 end
+
     local missingHealthPercent = 1 - healthPercent
 
     local r, g, b
@@ -503,11 +545,9 @@ function SMC:UpdateHealthRing()
     healthFrame:SetSwipeColor(r, g, b, 0.8)
 
     local hugeDuration = 86400
-    local elapsed = missingHealthPercent * hugeDuration
-    healthFrame:SetCooldown(GetTime() - elapsed, hugeDuration)
-    healthFrame:Show()
-
-    SMC.lastHealthPercent = healthPercent
+    local now = GetTime()
+    local startTime = now - ((1 - missingHealthPercent) * hugeDuration)
+    healthFrame:SetCooldown(startTime, hugeDuration)
 end
 
 -- Handle UNIT_HEALTH/UNIT_MAXHEALTH and forward into UpdateHealthRing.
@@ -519,66 +559,71 @@ end
 
 -- Recompute and redraw the power ring based on the player's resource.
 function SMC:UpdatePowerRing()
-    if CURRENT_API >= 120000 then return end
     local powerFrame = SMC.PowerFrame
     if not powerFrame then return end
 
-    local currentPower = UnitPower("player")
     local maxPower = UnitPowerMax("player")
+    if not maxPower or maxPower == 0 then return end
 
-    if maxPower == 0 then return end
+    local powerPercent
 
-    local powerPercent = currentPower / maxPower
-    local missingPowerPercent = 1 - powerPercent
-
-    local r, g, b = 0.0, 0.5, 1.0
-
-    if SMC_Settings.usePowerColors then
-        local powerType, powerToken = UnitPowerType("player")
-
-        if powerType == 0 then
-            r, g, b = 0.00, 0.00, 1.00
-        elseif powerType == 1 then
-            r, g, b = 1.00, 0.00, 0.00
-        elseif powerType == 2 then
-            r, g, b = 1.00, 0.50, 0.25
-        elseif powerType == 3 then
-            r, g, b = 1.00, 1.00, 0.00
-        elseif powerType == 4 then
-            r, g, b = 1.00, 0.96, 0.41
-        elseif powerType == 5 then
-            r, g, b = 0.50, 0.50, 0.50
-        elseif powerType == 6 then
-            r, g, b = 0.00, 0.82, 1.00
-        elseif powerType == 7 then
-            r, g, b = 0.50, 0.32, 0.55
-        elseif powerType == 8 then
-            r, g, b = 0.30, 0.52, 0.90
-        elseif powerType == 9 then
-            r, g, b = 0.95, 0.90, 0.60
-        elseif powerType == 11 then
-            r, g, b = 0.00, 0.50, 1.00
-        elseif powerType == 13 then
-            r, g, b = 0.40, 0.00, 0.80
-        elseif powerType == 12 then
-            r, g, b = 0.71, 1.00, 0.92
-        elseif powerType == 16 then
-            r, g, b = 0.10, 0.10, 0.98
-        elseif powerType == 17 then
-            r, g, b = 0.788, 0.259, 0.992
-        elseif powerType == 18 then
-            r, g, b = 1.00, 0.61, 0.00
+    local currentPower = UnitPower("player")
+    if issecretvalue and issecretvalue(currentPower) then
+        -- Prefer the new percent API on Midnight (12.0+)
+        if UnitPowerPercent then
+            local p = UnitPowerPercent("player")
+            if not (issecretvalue and issecretvalue(p)) and type(p) == "number" then
+                powerPercent = p
+            end
         end
+    else
+        if type(currentPower) == "number" then
+            powerPercent = currentPower / maxPower
+        end
+    end
+
+    if not powerPercent then
+        powerFrame:SetCooldown(0, 0)
+        return
+    end
+
+    if powerPercent < 0 then powerPercent = 0 end
+    if powerPercent > 1 then powerPercent = 1 end
+
+    local powerType = UnitPowerType("player")
+    local r, g, b
+    if powerType == 0 then
+        r, g, b = 0.00, 0.45, 1.00
+    elseif powerType == 1 then
+        r, g, b = 1.00, 0.00, 0.00
+    elseif powerType == 2 then
+        r, g, b = 1.00, 0.50, 0.25
+    elseif powerType == 3 then
+        r, g, b = 1.00, 1.00, 0.00
+    elseif powerType == 4 then
+        r, g, b = 1.00, 0.96, 0.41
+    elseif powerType == 5 then
+        r, g, b = 0.50, 0.50, 0.50
+    elseif powerType == 6 then
+        r, g, b = 0.00, 0.82, 1.00
+    elseif powerType == 7 then
+        r, g, b = 0.50, 0.32, 0.55
+    elseif powerType == 8 then
+        r, g, b = 0.71, 0.00, 1.00
+    elseif powerType == 9 then
+        r, g, b = 0.00, 1.00, 0.59
+    elseif powerType == 10 then
+        r, g, b = 0.30, 0.52, 0.90
+    else
+        r, g, b = 0.80, 0.80, 0.80
     end
 
     powerFrame:SetSwipeColor(r, g, b, 0.8)
 
     local hugeDuration = 86400
-    local elapsed = missingPowerPercent * hugeDuration
-    powerFrame:SetCooldown(GetTime() - elapsed, hugeDuration)
-    powerFrame:Show()
-
-    SMC.lastPowerPercent = powerPercent
+    local now = GetTime()
+    local startTime = now - (powerPercent * hugeDuration)
+    powerFrame:SetCooldown(startTime, hugeDuration)
 end
 
 -- Handle UNIT_POWER_UPDATE/UNIT_MAXPOWER and forward into UpdatePowerRing.
@@ -590,17 +635,25 @@ end
 
 -- Listen to combat log events and detect spells that trigger the GCD.
 function SMC:GCDCastHandler(self, event, unit, spellName, spellId)
-    if CURRENT_API >= 120000 then return end
     if GetTime() - SMC.lastGCDTime < 0.1 then return end
-
     SMC.lastGCDTime = GetTime()
 
     local GCDInfo = C_Spell.GetSpellCooldown(GCD_SPELL_ID)
+    if not GCDInfo then return end
 
-    if GCDInfo and GCDInfo.duration > 0 then
-        SMC:StartGCDAnimation(GCDInfo.startTime, GCDInfo.duration)
+    local duration = GCDInfo.duration
+    local startTime = GCDInfo.startTime
+    if not duration or not startTime then return end
+
+    -- If it's a secret duration, we can't compare it; just hand it to the cooldown frame.
+    if issecretvalue and issecretvalue(duration) then
+        SMC:StartGCDAnimation(startTime, duration)
+        return
     end
 
+    if type(duration) == "number" and duration > 0 then
+        SMC:StartGCDAnimation(startTime, duration)
+    end
 end
 
 -- Handle UNIT_SPELLCAST_* events and manage the cast ring state.
