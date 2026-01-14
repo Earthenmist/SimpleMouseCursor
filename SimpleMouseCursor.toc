@@ -1,8 +1,8 @@
-## Interface: 110205, 110207, 120000
+## Interface: 110207, 120000, 120001
 ## Title: Simple Mouse Cursor
 ## Notes: An addon that replaces the default cursor feel with a set of animated visual rings, pings, trails, and indicators that follow your mouse in real time.
 ## Author: Lanni-Alonsus
-## Version: 0.3a
+## Version: 1.0.1
 
 ## IconTexture: Interface\AddOns\SimpleMouseCursor\Images\SimpleMouseCursorLogo.tga
 ## DefaultState: Enabled
@@ -12,3 +12,4 @@ SimpleMouseCursor.xml
 SimpleMouseCursor.lua
 
 SMC_Settings.lua
+
