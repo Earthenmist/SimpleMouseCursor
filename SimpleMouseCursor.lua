@@ -120,6 +120,31 @@ function SMC:UpdateRingColors()
     end
 end
 
+
+-- Smoothly pulse the main ring between two configured colours (A → B → A).
+function SMC:UpdateMainRingPulse()
+    if not (SMC_Settings and SMC_Settings.enableMainRingPulse) then
+        return
+    end
+
+    if not (SMC_CursorFrame and SMC_CursorFrame.MainRing and SMC_CursorFrame.MainRing:IsShown()) then
+        return
+    end
+
+    local a = SMC_Settings.mainRingPulseColorA or { r = 1, g = 1, b = 1, a = 1 }
+    local b = SMC_Settings.mainRingPulseColorB or { r = 1, g = 1, b = 1, a = 1 }
+    local speed = tonumber(SMC_Settings.mainRingPulseSpeed) or 1.0
+    if speed <= 0 then speed = 1.0 end
+
+    local t = (math.cos(GetTime() * speed * (math.pi * 2)) + 1) / 2
+    local r = (a.r or 1) * (1 - t) + (b.r or 1) * t
+    local g = (a.g or 1) * (1 - t) + (b.g or 1) * t
+    local bl = (a.b or 1) * (1 - t) + (b.b or 1) * t
+    local al = (a.a or 1) * (1 - t) + (b.a or 1) * t
+
+    SMC_CursorFrame.MainRing:SetVertexColor(r, g, bl, al)
+end
+
 -- Update the central reticle texture, size, colour and visibility.
 function SMC:UpdateReticle()
     if not SMC_CursorFrame or not SMC_CursorFrame.Reticle then return end
@@ -263,6 +288,8 @@ function SMC:OnUpdate(elapsed)
     SMC_CursorFrame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", correctedX, correctedY)
 
     SMC:UpdateTrail(elapsed)
+
+    SMC:UpdateMainRingPulse()
 
     -- Modifier Key Logic
     local shiftDown = IsShiftKeyDown()

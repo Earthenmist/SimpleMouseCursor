@@ -23,6 +23,10 @@ SMC.defaults = {
     outerRing = "Cast",
     usePowerColors = false,
     useMainRingClassColor = false,
+    enableMainRingPulse = false,
+    mainRingPulseColorA = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
+    mainRingPulseColorB = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
+    mainRingPulseSpeed = 1.0,
     useGCDClassColor = false,
     useCastClassColor = false,
     enableTrail = false,
@@ -105,10 +109,26 @@ function SMC:InitializeSettings()
     if not SMC_Settings then
         SMC_Settings = {}
     end
-    
+
+    local function CopyTable(src)
+        local t = {}
+        for k, v in pairs(src) do
+            if type(v) == "table" then
+                t[k] = CopyTable(v)
+            else
+                t[k] = v
+            end
+        end
+        return t
+    end
+
     for key, value in pairs(SMC.defaults) do
         if SMC_Settings[key] == nil then
-            SMC_Settings[key] = value
+            if type(value) == "table" then
+                SMC_Settings[key] = CopyTable(value)
+            else
+                SMC_Settings[key] = value
+            end
         end
     end
 end
@@ -265,7 +285,7 @@ function SMC:CreateSettingsPanel()
     end)
 
     -- 2. Colors
-    local colorSeparator = CreateSeparator(content, "Colors", "TOPLEFT", outerDropdown, 0, -40)
+    local colorSeparator = CreateSeparator(content, "Colors", "TOPLEFT", outerDropdown, 0, -35)
     
     local reticleClassCheckbox = CreateFrame("CheckButton", "SMC_ReticleClassCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     reticleClassCheckbox:SetPoint("TOPLEFT", colorSeparator, "BOTTOMLEFT", 0, -15)
@@ -278,13 +298,14 @@ function SMC:CreateSettingsPanel()
     
     local mainRingClassCheckbox = CreateFrame("CheckButton", "SMC_MainRingClassCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     mainRingClassCheckbox:SetPoint("TOPLEFT", reticleClassCheckbox, "BOTTOMLEFT", 0, -5)
-    _G[mainRingClassCheckbox:GetName() .. "Text"]:SetText("Use Class Color for Main Ring")
+    _G[mainRingClassCheckbox:GetName() .. "Text"]:SetText("Use Class Color for Main Ring (Disabled if Pulse enabled)")
     mainRingClassCheckbox:SetChecked(SMC_Settings.useMainRingClassColor)
     mainRingClassCheckbox:SetScript("OnClick", function(self)
         SMC_Settings.useMainRingClassColor = self:GetChecked()
         SMC:ApplySettings()
     end)
-    
+
+
     local castClassCheckbox = CreateFrame("CheckButton", "SMC_CastClassCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     castClassCheckbox:SetPoint("TOPLEFT", mainRingClassCheckbox, "BOTTOMLEFT", 0, -5)
     _G[castClassCheckbox:GetName() .. "Text"]:SetText("Use Class Color for Cast")
@@ -311,9 +332,271 @@ function SMC:CreateSettingsPanel()
         SMC_Settings.usePowerColors = self:GetChecked()
         SMC:ApplySettings()
     end)
+
+-- Main Ring Pulse (A → B → A)
+local pulseSeparator = CreateSeparator(content, "Main Ring Pulse", "TOPLEFT", powerColorCheckbox, 0, -35)
+
+local pulseEnableCheckbox = CreateFrame("CheckButton", "SMC_MainRingPulseEnableCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
+pulseEnableCheckbox:SetPoint("TOPLEFT", pulseSeparator, "BOTTOMLEFT", 0, -12)
+_G[pulseEnableCheckbox:GetName() .. "Text"]:SetText("Enable Main Ring Pulse")
+pulseEnableCheckbox:SetChecked(SMC_Settings.enableMainRingPulse)
+
+local function SetCheckboxEnabled(cb, enabled)
+    if enabled then
+        cb:Enable()
+        local t = _G[cb:GetName() .. "Text"]
+        if t then t:SetTextColor(1, 0.82, 0, 1) end
+    else
+        cb:Disable()
+        local t = _G[cb:GetName() .. "Text"]
+        if t then t:SetTextColor(0.5, 0.5, 0.5, 1) end
+    end
+end
+
+local pulseColorAButton, pulseColorBButton, pulseAOpacitySlider, pulseBOpacitySlider
+
+local function UpdatePulseUIState()
+    if SMC_Settings.enableMainRingPulse then
+        -- Pulse overrides main ring coloring, so disable class-color option to avoid confusion.
+        SMC_Settings.useMainRingClassColor = false
+        mainRingClassCheckbox:SetChecked(false)
+        SetCheckboxEnabled(mainRingClassCheckbox, false)
+    else
+        SetCheckboxEnabled(mainRingClassCheckbox, true)
+    end
+    -- Enable/disable pulse colour controls
+    local enabled = SMC_Settings.enableMainRingPulse and true or false
+
+    if pulseColorAButton then
+        pulseColorAButton:SetEnabled(enabled)
+        pulseColorAButton:SetAlpha(enabled and 1 or 0.35)
+    end
+    if pulseColorBButton then
+        pulseColorBButton:SetEnabled(enabled)
+        pulseColorBButton:SetAlpha(enabled and 1 or 0.35)
+    end
+    if pulseAOpacitySlider then
+        pulseAOpacitySlider:SetEnabled(enabled)
+        pulseAOpacitySlider:SetAlpha(enabled and 1 or 0.35)
+    end
+    if pulseBOpacitySlider then
+        pulseBOpacitySlider:SetEnabled(enabled)
+        pulseBOpacitySlider:SetAlpha(enabled and 1 or 0.35)
+    end
+end
+
+-- Small helper to open the Blizzard color picker (includes alpha)
+-- Small helper to open the Blizzard color picker (RGB only).
+-- NOTE: Midnight prepatch (12.0.0/12.0.1) has unstable behaviour around the built-in opacity slider.
+-- We therefore handle per-colour opacity with our own sliders and only use the picker for RGB.
+local function OpenRGBAColorPicker(initial, onChanged)
+    local r, g, b = initial.r or 1, initial.g or 1, initial.b or 1
+    local a = initial.a
+    if a == nil then a = 1 end
+
+    local function Swatch()
+        local nr, ng, nb = ColorPickerFrame:GetColorRGB()
+        onChanged(nr, ng, nb, a) -- preserve existing alpha
+    end
+
+    if ColorPickerFrame and ColorPickerFrame.SetupColorPickerAndShow then
+        local info = {
+            r = r, g = g, b = b,
+            hasOpacity = false,
+            swatchFunc = Swatch,
+            cancelFunc = function(prev)
+                if not prev then return end
+                local pr, pg, pb = prev.r or r, prev.g or g, prev.b or b
+                onChanged(pr, pg, pb, a)
+            end,
+        }
+        info.previousValues = { r = r, g = g, b = b }
+        ColorPickerFrame:SetupColorPickerAndShow(info)
+        return
+    end
+
+    -- Legacy fallback
+    if not ColorPickerFrame then return end
+    ColorPickerFrame.hasOpacity = false
+    ColorPickerFrame.previousValues = { r = r, g = g, b = b }
+
+    ColorPickerFrame.func = Swatch
+    ColorPickerFrame.cancelFunc = function(prev)
+        if prev then
+            onChanged(prev.r, prev.g, prev.b, a)
+        end
+    end
+
+    if ColorPickerFrame.SetColorRGB then
+        ColorPickerFrame:SetColorRGB(r, g, b)
+    end
+    ColorPickerFrame:Hide()
+    ColorPickerFrame:Show()
+end
+
+
+
+-- Color swatch A
+local pulseColorALabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+pulseColorALabel:SetPoint("TOPLEFT", pulseEnableCheckbox, "BOTTOMLEFT", 4, -10)
+pulseColorALabel:SetText("Pulse Color A")
+
+pulseColorAButton = CreateFrame("Button", "SMC_MainRingPulseColorAButton", content, "UIPanelButtonTemplate")
+pulseColorAButton:SetSize(26, 18)
+pulseColorAButton:SetPoint("LEFT", pulseColorALabel, "RIGHT", 12, 0)
+pulseColorAButton:SetText("")
+
+local pulseColorATex = pulseColorAButton:CreateTexture(nil, "ARTWORK")
+pulseColorATex:SetAllPoints()
+pulseColorATex:SetColorTexture(
+    SMC_Settings.mainRingPulseColorA.r,
+    SMC_Settings.mainRingPulseColorA.g,
+    SMC_Settings.mainRingPulseColorA.b,
+    SMC_Settings.mainRingPulseColorA.a or 1
+)
+
+pulseColorAButton:SetScript("OnClick", function()
+    OpenRGBAColorPicker(SMC_Settings.mainRingPulseColorA, function(r, g, b, a)
+        SMC_Settings.mainRingPulseColorA = { r = r, g = g, b = b, a = a }
+        pulseColorATex:SetColorTexture(r, g, b, a)
+        SMC:ApplySettings()
+    end)
+end)
+
+-- Pulse A opacity slider (we manage alpha ourselves; see note in OpenRGBAColorPicker)
+local pulseAOpacityLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+pulseAOpacityLabel:SetPoint("LEFT", pulseColorAButton, "RIGHT", 10, 0)
+pulseAOpacityLabel:SetText("Opacity")
+
+pulseAOpacitySlider = CreateFrame("Slider", "SMC_PulseAOpacitySlider", content, "OptionsSliderTemplate")
+pulseAOpacitySlider:SetPoint("LEFT", pulseAOpacityLabel, "RIGHT", 8, 0)
+pulseAOpacitySlider:SetMinMaxValues(0, 1)
+pulseAOpacitySlider:SetValueStep(0.01)
+pulseAOpacitySlider:SetObeyStepOnDrag(true)
+pulseAOpacitySlider:SetWidth(140)
+
+local function UpdatePulseAOpacityText(val)
+    local pct = math.floor((val or 0) * 100 + 0.5)
+    _G[pulseAOpacitySlider:GetName() .. "Text"]:SetText(string.format("%d%%", pct))
+    _G[pulseAOpacitySlider:GetName() .. "Low"]:SetText("0%")
+    _G[pulseAOpacitySlider:GetName() .. "High"]:SetText("100%")
+end
+
+pulseAOpacitySlider:SetValue(SMC_Settings.mainRingPulseColorA.a or 1)
+UpdatePulseAOpacityText(SMC_Settings.mainRingPulseColorA.a or 1)
+
+pulseAOpacitySlider:SetScript("OnValueChanged", function(self, value)
+    if not SMC_Settings.mainRingPulseColorA then
+        SMC_Settings.mainRingPulseColorA = { r = 1, g = 1, b = 1, a = 1 }
+    end
+    SMC_Settings.mainRingPulseColorA.a = value
+    UpdatePulseAOpacityText(value)
+
+    -- Refresh swatch texture
+    pulseColorATex:SetColorTexture(
+        SMC_Settings.mainRingPulseColorA.r,
+        SMC_Settings.mainRingPulseColorA.g,
+        SMC_Settings.mainRingPulseColorA.b,
+        value
+    )
+    SMC:ApplySettings()
+end)
+
+
+-- Color swatch B
+local pulseColorBLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+pulseColorBLabel:SetPoint("TOPLEFT", pulseColorALabel, "BOTTOMLEFT", 0, -10)
+pulseColorBLabel:SetText("Pulse Color B")
+
+pulseColorBButton = CreateFrame("Button", "SMC_MainRingPulseColorBButton", content, "UIPanelButtonTemplate")
+pulseColorBButton:SetSize(26, 18)
+pulseColorBButton:SetPoint("LEFT", pulseColorBLabel, "RIGHT", 12, 0)
+pulseColorBButton:SetText("")
+
+local pulseColorBTex = pulseColorBButton:CreateTexture(nil, "ARTWORK")
+pulseColorBTex:SetAllPoints()
+pulseColorBTex:SetColorTexture(
+    SMC_Settings.mainRingPulseColorB.r,
+    SMC_Settings.mainRingPulseColorB.g,
+    SMC_Settings.mainRingPulseColorB.b,
+    SMC_Settings.mainRingPulseColorB.a or 1
+)
+
+pulseColorBButton:SetScript("OnClick", function()
+    OpenRGBAColorPicker(SMC_Settings.mainRingPulseColorB, function(r, g, b, a)
+        SMC_Settings.mainRingPulseColorB = { r = r, g = g, b = b, a = a }
+        pulseColorBTex:SetColorTexture(r, g, b, a)
+        SMC:ApplySettings()
+    end)
+end)
+
+-- Pulse B opacity slider (we manage alpha ourselves; see note in OpenRGBAColorPicker)
+local pulseBOpacityLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+pulseBOpacityLabel:SetPoint("LEFT", pulseColorBButton, "RIGHT", 10, 0)
+pulseBOpacityLabel:SetText("Opacity")
+
+pulseBOpacitySlider = CreateFrame("Slider", "SMC_PulseBOpacitySlider", content, "OptionsSliderTemplate")
+pulseBOpacitySlider:SetPoint("LEFT", pulseBOpacityLabel, "RIGHT", 8, 0)
+pulseBOpacitySlider:SetMinMaxValues(0, 1)
+pulseBOpacitySlider:SetValueStep(0.01)
+pulseBOpacitySlider:SetObeyStepOnDrag(true)
+pulseBOpacitySlider:SetWidth(140)
+
+local function UpdatePulseBOpacityText(val)
+    local pct = math.floor((val or 0) * 100 + 0.5)
+    _G[pulseBOpacitySlider:GetName() .. "Text"]:SetText(string.format("%d%%", pct))
+    _G[pulseBOpacitySlider:GetName() .. "Low"]:SetText("0%")
+    _G[pulseBOpacitySlider:GetName() .. "High"]:SetText("100%")
+end
+
+pulseBOpacitySlider:SetValue(SMC_Settings.mainRingPulseColorB.a or 1)
+UpdatePulseBOpacityText(SMC_Settings.mainRingPulseColorB.a or 1)
+
+pulseBOpacitySlider:SetScript("OnValueChanged", function(self, value)
+    if not SMC_Settings.mainRingPulseColorB then
+        SMC_Settings.mainRingPulseColorB = { r = 1, g = 1, b = 1, a = 1 }
+    end
+    SMC_Settings.mainRingPulseColorB.a = value
+    UpdatePulseBOpacityText(value)
+
+    -- Refresh swatch texture
+    pulseColorBTex:SetColorTexture(
+        SMC_Settings.mainRingPulseColorB.r,
+        SMC_Settings.mainRingPulseColorB.g,
+        SMC_Settings.mainRingPulseColorB.b,
+        value
+    )
+    SMC:ApplySettings()
+end)
+
+
+-- Pulse speed slider
+local pulseSpeedSlider = CreateFrame("Slider", "SMC_MainRingPulseSpeedSlider", content, "OptionsSliderTemplate")
+pulseSpeedSlider:SetPoint("TOPLEFT", pulseColorBLabel, "BOTTOMLEFT", -2, -22)
+pulseSpeedSlider:SetWidth(220)
+pulseSpeedSlider:SetMinMaxValues(0.25, 3.0)
+pulseSpeedSlider:SetValueStep(0.05)
+pulseSpeedSlider:SetObeyStepOnDrag(true)
+pulseSpeedSlider:SetValue(SMC_Settings.mainRingPulseSpeed or 1.0)
+_G[pulseSpeedSlider:GetName() .. "Low"]:SetText("0.25")
+_G[pulseSpeedSlider:GetName() .. "High"]:SetText("3.0")
+_G[pulseSpeedSlider:GetName() .. "Text"]:SetText("Pulse Speed")
+
+pulseSpeedSlider:SetScript("OnValueChanged", function(self, value)
+    SMC_Settings.mainRingPulseSpeed = value
+    SMC:ApplySettings()
+end)
+
+pulseEnableCheckbox:SetScript("OnClick", function(self)
+    SMC_Settings.enableMainRingPulse = self:GetChecked()
+    UpdatePulseUIState()
+    SMC:ApplySettings()
+end)
+
+UpdatePulseUIState()
     
     -- 3. Mouse Trail
-    local trailSeparator = CreateSeparator(content, "Mouse Trail", "TOPLEFT", powerColorCheckbox, 0, -25)
+    local trailSeparator = CreateSeparator(content, "Mouse Trail", "TOPLEFT", pulseSpeedSlider, 0, -35)
     
     local enableTrailCheckbox = CreateFrame("CheckButton", "SMC_EnableTrailCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     enableTrailCheckbox:SetPoint("TOPLEFT", trailSeparator, "BOTTOMLEFT", 0, -15)
@@ -540,8 +823,23 @@ function SMC:CreateSettingsPanel()
     resetButton:SetPoint("TOPLEFT", resetSeparator, "BOTTOMLEFT", 0, -10)
     resetButton:SetText("Reset to Default Values")
     resetButton:SetScript("OnClick", function(self)
+        local function CopyTable(src)
+            local t = {}
+            for k, v in pairs(src) do
+                if type(v) == "table" then
+                    t[k] = CopyTable(v)
+                else
+                    t[k] = v
+                end
+            end
+            return t
+        end
         for key, value in pairs(SMC.defaults) do
-            SMC_Settings[key] = value
+            if type(value) == "table" then
+                SMC_Settings[key] = CopyTable(value)
+            else
+                SMC_Settings[key] = value
+            end
         end
         scaleSlider:SetValue(SMC_Settings.scale)
         scaleValue:SetText(string.format("%.1f", SMC_Settings.scale))
@@ -551,6 +849,12 @@ function SMC:CreateSettingsPanel()
         reticleClassCheckbox:SetChecked(SMC_Settings.useReticleClassColor)
         powerColorCheckbox:SetChecked(SMC_Settings.usePowerColors)
         mainRingClassCheckbox:SetChecked(SMC_Settings.useMainRingClassColor)
+        if pulseEnableCheckbox then pulseEnableCheckbox:SetChecked(SMC_Settings.enableMainRingPulse) end
+        if refreshA then refreshA() end
+        if refreshB then refreshB() end
+        if pulseSpeedSlider then pulseSpeedSlider:SetValue(SMC_Settings.mainRingPulseSpeed or 1.0) end
+        if pulseSpeedValue then pulseSpeedValue:SetText(string.format("%.1fx", SMC_Settings.mainRingPulseSpeed or 1.0)) end
+        if UpdatePulseUIState then UpdatePulseUIState() end
         gcdClassCheckbox:SetChecked(SMC_Settings.useGCDClassColor)
         castClassCheckbox:SetChecked(SMC_Settings.useCastClassColor)
         enableTrailCheckbox:SetChecked(SMC_Settings.enableTrail)
