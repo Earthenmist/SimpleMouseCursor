@@ -1,4 +1,4 @@
-## :jigsaw: Addon Updates (2026-02-09)
+## 🧩 Addon Updates (2026-02-09)
 
 **Simple Mouse Cursor** — v1.0.2  
 
