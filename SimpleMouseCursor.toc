@@ -4,6 +4,9 @@
 ## Author: Lanni-Alonsus
 ## Version: 1.0.1
 
+## X-Curse-Project-ID: 1393753
+## X-Wago-ID: j6jm0MNR
+
 ## IconTexture: Interface\AddOns\SimpleMouseCursor\Images\SimpleMouseCursorLogo.tga
 ## DefaultState: Enabled
 ## SavedVariables: SMC_Settings
@@ -12,4 +15,5 @@ SimpleMouseCursor.xml
 SimpleMouseCursor.lua
 
 SMC_Settings.lua
+
 
