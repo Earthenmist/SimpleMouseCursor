@@ -2,7 +2,7 @@
 ## Title: Simple Mouse Cursor
 ## Notes: An addon that replaces the default cursor feel with a set of animated visual rings, pings, trails, and indicators that follow your mouse in real time.
 ## Author: Lanni-Alonsus
-## Version: 1.0.1
+## Version: 1.0.2
 
 ## X-Curse-Project-ID: 1393753
 ## X-Wago-ID: j6jm0MNR
@@ -15,5 +15,6 @@ SimpleMouseCursor.xml
 SimpleMouseCursor.lua
 
 SMC_Settings.lua
+
 
 
