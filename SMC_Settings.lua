@@ -355,6 +355,8 @@ end
 
 local pulseColorAButton, pulseColorBButton, pulseAOpacitySlider, pulseBOpacitySlider
 
+local pulseColorAButton, pulseColorBButton, pulseColorATex, pulseColorBTex, pulseAOpacitySlider, pulseBOpacitySlider
+
 local function UpdatePulseUIState()
     if SMC_Settings.enableMainRingPulse then
         -- Pulse overrides main ring coloring, so disable class-color option to avoid confusion.
@@ -446,7 +448,7 @@ pulseColorAButton:SetSize(26, 18)
 pulseColorAButton:SetPoint("LEFT", pulseColorALabel, "RIGHT", 12, 0)
 pulseColorAButton:SetText("")
 
-local pulseColorATex = pulseColorAButton:CreateTexture(nil, "ARTWORK")
+pulseColorATex = pulseColorAButton:CreateTexture(nil, "ARTWORK")
 pulseColorATex:SetAllPoints()
 pulseColorATex:SetColorTexture(
     SMC_Settings.mainRingPulseColorA.r,
@@ -513,7 +515,7 @@ pulseColorBButton:SetSize(26, 18)
 pulseColorBButton:SetPoint("LEFT", pulseColorBLabel, "RIGHT", 12, 0)
 pulseColorBButton:SetText("")
 
-local pulseColorBTex = pulseColorBButton:CreateTexture(nil, "ARTWORK")
+pulseColorBTex = pulseColorBButton:CreateTexture(nil, "ARTWORK")
 pulseColorBTex:SetAllPoints()
 pulseColorBTex:SetColorTexture(
     SMC_Settings.mainRingPulseColorB.r,
@@ -850,8 +852,31 @@ UpdatePulseUIState()
         powerColorCheckbox:SetChecked(SMC_Settings.usePowerColors)
         mainRingClassCheckbox:SetChecked(SMC_Settings.useMainRingClassColor)
         if pulseEnableCheckbox then pulseEnableCheckbox:SetChecked(SMC_Settings.enableMainRingPulse) end
-        if refreshA then refreshA() end
-        if refreshB then refreshB() end
+        -- Refresh pulse swatches + sliders
+        if pulseColorATex then
+            local c = SMC_Settings.mainRingPulseColorA or { r = 1, g = 1, b = 1, a = 1 }
+            pulseColorATex:SetColorTexture(c.r or 1, c.g or 1, c.b or 1, c.a or 1)
+        end
+        if pulseColorBTex then
+            local c = SMC_Settings.mainRingPulseColorB or { r = 1, g = 1, b = 1, a = 1 }
+            pulseColorBTex:SetColorTexture(c.r or 1, c.g or 1, c.b or 1, c.a or 1)
+        end
+        if pulseAOpacitySlider then
+            local a = (SMC_Settings.mainRingPulseColorA and SMC_Settings.mainRingPulseColorA.a) or 1
+            pulseAOpacitySlider:SetValue(a)
+            local name = pulseAOpacitySlider:GetName()
+            if name and _G[name .. "Text"] then
+                _G[name .. "Text"]:SetText(string.format("%d%%", math.floor(a * 100 + 0.5)))
+            end
+        end
+        if pulseBOpacitySlider then
+            local a = (SMC_Settings.mainRingPulseColorB and SMC_Settings.mainRingPulseColorB.a) or 1
+            pulseBOpacitySlider:SetValue(a)
+            local name = pulseBOpacitySlider:GetName()
+            if name and _G[name .. "Text"] then
+                _G[name .. "Text"]:SetText(string.format("%d%%", math.floor(a * 100 + 0.5)))
+            end
+        end
         if pulseSpeedSlider then pulseSpeedSlider:SetValue(SMC_Settings.mainRingPulseSpeed or 1.0) end
         if pulseSpeedValue then pulseSpeedValue:SetText(string.format("%.1fx", SMC_Settings.mainRingPulseSpeed or 1.0)) end
         if UpdatePulseUIState then UpdatePulseUIState() end
