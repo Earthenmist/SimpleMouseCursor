@@ -177,6 +177,41 @@ function SMC:InitializeTrail()
     end
 end
 
+function SMC:AnimateMainRingFlash()
+    if not SMC_Settings.enableMainRingFlash then return end
+
+    if SMC_CursorFrame and SMC_CursorFrame.MainRing then
+        local speed = SMC_Settings.mainFlashSpeed or 1.0
+        local c1 = SMC_Settings.mainFlashStartColor or {r=1, g=0, b=1, a=1}
+        local c2 = SMC_Settings.mainFlashEndColor or {r=0, g=1, b=1, a=1}
+        local t = GetTime()
+        local s = (math.cos(t * speed * 2 * math.pi) + 1.0) * 0.5
+        local r = c1.r + (c2.r - c1.r) * s
+        local g = c1.g + (c2.g - c1.g) * s
+        local b = c1.b + (c2.b - c1.b) * s
+        local a = c1.a + (c2.a - c1.a) * s
+
+        SMC_CursorFrame.MainRing:SetVertexColor(r, g, b, a)
+    end
+end
+
+function SMC:AnimateMainRingRotation()
+    if not SMC_Settings.enableMainRingRotation then return end
+
+    if SMC_CursorFrame and SMC_CursorFrame.MainRing then
+        local speed = SMC_Settings.mainRingRotSpeed or 1.0
+        local c1 = SMC_Settings.mainRingRotColor1
+        local c2 = SMC_Settings.mainRingRotColor2
+        local t = GetTime()
+        local angle = (t * speed) % (2 * math.pi)
+
+    SMC_CursorFrame.MainRing:SetRotation(angle)
+    local color1 = CreateColor(c1.r, c1.g, c1.b, c1.a)
+    local color2 = CreateColor(c2.r, c2.g, c2.b, c2.a)
+    SMC_CursorFrame.MainRing:SetGradient("HORIZONTAL", color1, color2)
+    end
+end
+
 -- Advance / fade trail elements each frame while the trail is enabled.
 function SMC:UpdateTrail(elapsed)
     -- Check if trail should be visible based on cursor visibility
@@ -263,6 +298,10 @@ function SMC:OnUpdate(elapsed)
     SMC_CursorFrame:SetPoint("CENTER", UIParent, "BOTTOMLEFT", correctedX, correctedY)
 
     SMC:UpdateTrail(elapsed)
+
+    -- Call Main Ring Color Animation Functions
+    SMC:AnimateMainRingFlash()
+    SMC:AnimateMainRingRotation()
 
     -- Modifier Key Logic
     local shiftDown = IsShiftKeyDown()

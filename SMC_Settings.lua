@@ -40,6 +40,14 @@ SMC.defaults = {
     reticleScale = 1.5,
     useReticleClassColor = false,
     transparency = 1.0,
+    mainFlashStartColor = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},
+    mainFlashEndColor   = {r = 1.0, g = 1.0, b = 1.0, a = 0.0},
+    mainFlashSpeed = 1.0,
+    enableMainRingFlash = false,
+    mainRingRotColor1 = {r = 1.0, g = 1.0, b = 1.0, a = 1.0},
+    mainRingRotColor2 = {r = 1.0, g = 1.0, b = 1.0, a = 0.0},
+    mainRingRotSpeed = 1.0,
+    enableMainRingRotation = false,
 }
 
 SMC.ringOptions = {
@@ -311,9 +319,137 @@ function SMC:CreateSettingsPanel()
         SMC_Settings.usePowerColors = self:GetChecked()
         SMC:ApplySettings()
     end)
-    
+
+    -- 2.5 Main Ring Flash
+    -- defaults to white for start and end colors as a way of mimicking the default behavior
+    local flashSeparator = CreateSeparator(content, "Main Ring Flash", "TOPLEFT", powerColorCheckbox, 0, -25)
+
+    local enableFlashCheckbox = CreateFrame("CheckButton", "SMC_EnableMainFlashCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
+    enableFlashCheckbox:SetPoint("TOPLEFT", flashSeparator, "BOTTOMLEFT", 0, -15)
+    _G[enableFlashCheckbox:GetName() .. "Text"]:SetText("Enable Main Ring Flash")
+    enableFlashCheckbox:SetChecked(SMC_Settings.enableMainRingFlash)
+    enableFlashCheckbox:SetScript("OnClick", function(self)
+        SMC_Settings.enableMainRingFlash = self:GetChecked()
+        SMC:ApplySettings() -- Re-apply settings to update ring state immediately
+    end)
+
+    local function CreateColorChannelSlider(labelText, anchor, xOffset, yOffset, configTable, channel, nameSuffix)
+        local labelFrame = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+        labelFrame:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", xOffset, yOffset)
+        labelFrame:SetText(labelText)
+
+        local sliderName = "SMC_ColorSlider_" .. nameSuffix
+        local slider = CreateFrame("Slider", sliderName, content, "OptionsSliderTemplate")
+
+        slider:SetPoint("LEFT", labelFrame, "RIGHT", 10, 0)
+        slider:SetPoint("TOP", labelFrame, "TOP", 0, 0)
+        slider:SetMinMaxValues(0, 1)
+        slider:SetValueStep(0.01)
+        slider:SetObeyStepOnDrag(true)
+        slider:SetWidth(140)
+
+        slider:SetValue(configTable[channel] or 0)
+
+        _G[slider:GetName() .. "Low"]:SetText("0.0")
+        _G[slider:GetName() .. "High"]:SetText("1.0")
+        _G[slider:GetName() .. "Text"]:SetText("") 
+
+        local valText = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+        valText:SetPoint("LEFT", slider, "RIGHT", 5, 0)
+        valText:SetText(string.format("%.2f", configTable[channel] or 0))
+
+        slider:SetScript("OnValueChanged", function(self, value)
+            configTable[channel] = value
+            valText:SetText(string.format("%.2f", value))
+        end)
+
+        return labelFrame
+    end
+
+    local s_r_Label = CreateColorChannelSlider("Start Color (R):", enableFlashCheckbox, 16, -20, SMC_Settings.mainFlashStartColor, "r", "StartR")
+    local s_g_Label = CreateColorChannelSlider("Start Color (G):", s_r_Label, 0, -25, SMC_Settings.mainFlashStartColor, "g", "StartG")
+    local s_b_Label = CreateColorChannelSlider("Start Color (B):", s_g_Label, 0, -25, SMC_Settings.mainFlashStartColor, "b", "StartB")
+    local s_a_Label = CreateColorChannelSlider("Start Color (A):", s_b_Label, 0, -25, SMC_Settings.mainFlashStartColor, "a", "StartA")
+    local e_r_Label = CreateColorChannelSlider("End Color (R):", s_a_Label, 0, -45, SMC_Settings.mainFlashEndColor, "r", "EndR")
+    local e_g_Label = CreateColorChannelSlider("End Color (G):", e_r_Label, 0, -25, SMC_Settings.mainFlashEndColor, "g", "EndG")
+    local e_b_Label = CreateColorChannelSlider("End Color (B):", e_g_Label, 0, -25, SMC_Settings.mainFlashEndColor, "b", "EndB")
+    local e_a_Label = CreateColorChannelSlider("End Color (A):", e_b_Label, 0, -25, SMC_Settings.mainFlashEndColor, "a", "EndA")
+    local speedLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+
+    speedLabel:SetPoint("TOPLEFT", e_a_Label, "BOTTOMLEFT", 0, -30)
+    speedLabel:SetText("Flash Speed:")
+    local speedSlider = CreateFrame("Slider", "SMC_FlashSpeedSlider", content, "OptionsSliderTemplate")
+    speedSlider:SetPoint("LEFT", speedLabel, "RIGHT", 10, 0)
+    speedSlider:SetMinMaxValues(0.1, 5.0)
+    speedSlider:SetValue(SMC_Settings.mainFlashSpeed or 1.0)
+    speedSlider:SetValueStep(0.1)
+    speedSlider:SetObeyStepOnDrag(true)
+    speedSlider:SetWidth(140)
+    _G[speedSlider:GetName() .. "Low"]:SetText("Slow")
+    _G[speedSlider:GetName() .. "High"]:SetText("Fast")
+    _G[speedSlider:GetName() .. "Text"]:SetText("")
+
+    local speedValue = content:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    speedValue:SetPoint("LEFT", speedSlider, "RIGHT", 5, 0)
+    speedValue:SetText(string.format("%.1fx", SMC_Settings.mainFlashSpeed or 1.0))
+
+    speedSlider:SetScript("OnValueChanged", function(self, value)
+        SMC_Settings.mainFlashSpeed = value
+        speedValue:SetText(string.format("%.1fx", value))
+    end)
+
+    -- 2.75 Main Ring Rotation
+    local rotationSeparator = CreateSeparator(content, "Main Ring Rotation", "TOPLEFT", speedLabel, -16, -30)
+
+    local enableRotCheckbox = CreateFrame("CheckButton", "SMC_EnableRotCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
+    enableRotCheckbox:SetPoint("TOPLEFT", rotationSeparator, "BOTTOMLEFT", 0, -15)
+    _G[enableRotCheckbox:GetName() .. "Text"]:SetText("Enable Main Ring Rotation")
+    enableRotCheckbox:SetChecked(SMC_Settings.enableMainRingRotation)
+    enableRotCheckbox:SetScript("OnClick", function(self)
+        SMC_Settings.enableMainRingRotation = self:GetChecked()
+        SMC:ApplySettings()
+    end)
+
+    -- Color 1 (Start)
+    -- Reusing CreateColorChannelSlider helper from 2.5
+    local rot1_r_Label = CreateColorChannelSlider("Rot Start (R):", enableRotCheckbox, 16, -20, SMC_Settings.mainRingRotColor1, "r", "RotStartR")
+    local rot1_g_Label = CreateColorChannelSlider("Rot Start (G):", rot1_r_Label, 0, -25, SMC_Settings.mainRingRotColor1, "g", "RotStartG")
+    local rot1_b_Label = CreateColorChannelSlider("Rot Start (B):", rot1_g_Label, 0, -25, SMC_Settings.mainRingRotColor1, "b", "RotStartB")
+    local rot1_a_Label = CreateColorChannelSlider("Rot Start (A):", rot1_b_Label, 0, -25, SMC_Settings.mainRingRotColor1, "a", "RotStartA")
+
+    -- Color 2 (End)
+    local rot2_r_Label = CreateColorChannelSlider("Rot End (R):", rot1_a_Label, 0, -45, SMC_Settings.mainRingRotColor2, "r", "RotEndR")
+    local rot2_g_Label = CreateColorChannelSlider("Rot End (G):", rot2_r_Label, 0, -25, SMC_Settings.mainRingRotColor2, "g", "RotEndG")
+    local rot2_b_Label = CreateColorChannelSlider("Rot End (B):", rot2_g_Label, 0, -25, SMC_Settings.mainRingRotColor2, "b", "RotEndB")
+    local rot2_a_Label = CreateColorChannelSlider("Rot End (A):", rot2_b_Label, 0, -25, SMC_Settings.mainRingRotColor2, "a", "RotEndA")
+
+    -- Rotation Speed
+    local rotSpeedLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+    rotSpeedLabel:SetPoint("TOPLEFT", rot2_a_Label, "BOTTOMLEFT", 0, -30)
+    rotSpeedLabel:SetText("Rotation Speed:")
+
+    local rotSpeedSlider = CreateFrame("Slider", "SMC_RotSpeedSlider", content, "OptionsSliderTemplate")
+    rotSpeedSlider:SetPoint("LEFT", rotSpeedLabel, "RIGHT", 10, 0)
+    rotSpeedSlider:SetMinMaxValues(0.1, 5.0)
+    rotSpeedSlider:SetValue(SMC_Settings.mainRingRotSpeed or 1.0)
+    rotSpeedSlider:SetValueStep(0.1)
+    rotSpeedSlider:SetObeyStepOnDrag(true)
+    rotSpeedSlider:SetWidth(140)
+    _G[rotSpeedSlider:GetName() .. "Low"]:SetText("Slow")
+    _G[rotSpeedSlider:GetName() .. "High"]:SetText("Fast")
+    _G[rotSpeedSlider:GetName() .. "Text"]:SetText("")
+
+    local rotSpeedValue = content:CreateFontString(nil, "ARTWORK", "GameFontHighlight")
+    rotSpeedValue:SetPoint("LEFT", rotSpeedSlider, "RIGHT", 5, 0)
+    rotSpeedValue:SetText(string.format("%.1fx", SMC_Settings.mainRingRotSpeed or 1.0))
+
+    rotSpeedSlider:SetScript("OnValueChanged", function(self, value)
+        SMC_Settings.mainRingRotSpeed = value
+        rotSpeedValue:SetText(string.format("%.1fx", value))
+    end)
+
     -- 3. Mouse Trail
-    local trailSeparator = CreateSeparator(content, "Mouse Trail", "TOPLEFT", powerColorCheckbox, 0, -25)
+    local trailSeparator = CreateSeparator(content, "Mouse Trail", "TOPLEFT", rotSpeedLabel, -16, -30)
     
     local enableTrailCheckbox = CreateFrame("CheckButton", "SMC_EnableTrailCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     enableTrailCheckbox:SetPoint("TOPLEFT", trailSeparator, "BOTTOMLEFT", 0, -15)
