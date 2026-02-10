@@ -2,7 +2,7 @@
 ## Title: Simple Mouse Cursor
 ## Notes: An addon that replaces the default cursor feel with a set of animated visual rings, pings, trails, and indicators that follow your mouse in real time.
 ## Author: Lanni-Alonsus
-## Version: 1.0.4-Beta
+## Version: 1.1.0
 ## Category: Unit Frames
 
 ## X-Curse-Project-ID: 1393753
