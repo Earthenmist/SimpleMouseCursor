@@ -335,7 +335,7 @@ function SMC:CreateSettingsPanel()
     end)
 
 -- Main Ring Pulse (A → B → A)
-local pulseSeparator = CreateSeparator(content, "Main Ring Pulse", "TOPLEFT", powerColorCheckbox, 0, -35)
+local pulseSeparator = CreateSeparator(content, "Main Ring Pulse/Rotation", "TOPLEFT", powerColorCheckbox, 0, -35)
 
 local pulseEnableCheckbox = CreateFrame("CheckButton", "SMC_MainRingPulseEnableCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
 pulseEnableCheckbox:SetPoint("TOPLEFT", pulseSeparator, "BOTTOMLEFT", 0, -12)
