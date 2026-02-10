@@ -148,12 +148,14 @@ function SMC:UpdateMainRingRotation()
     end
     
     if SMC_CursorFrame and SMC_CursorFrame.MainRing then
-        local speed = SMC_Settings.mainRingPulseSpeed or 1.0
+        -- Needed a constant value to speed up the rotation, 6x felt about right
+        -- negative to make the rotation clockwise
+        local speed = -6 * SMC_Settings.mainRingPulseSpeed or 1.0
         local c1 = SMC_Settings.mainRingPulseColorA or { r = 1.0, g = 1.0, b = 1.0, a = 1.0 }
         local c2 = SMC_Settings.mainRingPulseColorB or { r = 1.0, g = 1.0, b = 1.0, a = 1.0 }
 
         local t = GetTime()
-        local angle = (t * -2 * speed) % (2 * math.pi)
+        local angle = (t * speed) % (2 * math.pi)
 
         SMC_CursorFrame.MainRing:SetRotation(angle)
 
