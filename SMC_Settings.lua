@@ -27,6 +27,10 @@ SMC.defaults = {
     mainRingPulseColorA = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
     mainRingPulseColorB = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
     mainRingPulseSpeed = 1.0,
+    enableMainRingRotation = false,
+    mainRingRotColor1 = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
+    mainRingRotColor2 = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
+    mainRingRotSpeed = 1.0,
     useGCDClassColor = false,
     useCastClassColor = false,
     enableTrail = false,
@@ -298,7 +302,7 @@ function SMC:CreateSettingsPanel()
     
     local mainRingClassCheckbox = CreateFrame("CheckButton", "SMC_MainRingClassCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     mainRingClassCheckbox:SetPoint("TOPLEFT", reticleClassCheckbox, "BOTTOMLEFT", 0, -5)
-    _G[mainRingClassCheckbox:GetName() .. "Text"]:SetText("Use Class Color for Main Ring (Disabled if Pulse enabled)")
+    _G[mainRingClassCheckbox:GetName() .. "Text"]:SetText("Use Class Color for Main Ring (Disabled if Pulse or Rotation Enabled)")
     mainRingClassCheckbox:SetChecked(SMC_Settings.useMainRingClassColor)
     mainRingClassCheckbox:SetScript("OnClick", function(self)
         SMC_Settings.useMainRingClassColor = self:GetChecked()
@@ -353,9 +357,19 @@ local function SetCheckboxEnabled(cb, enabled)
     end
 end
 
-local pulseColorAButton, pulseColorBButton, pulseAOpacitySlider, pulseBOpacitySlider
+local function SetLabelEnabled(fs, enabled)
+    if not fs then return end
+    if enabled then
+        fs:SetTextColor(1.0, 0.82, 0, 1)
+        fs:SetAlpha(1)
+    else
+        fs:SetTextColor(0.55, 0.55, 0.55, 1)
+        fs:SetAlpha(1)
+    end
+end
 
-local pulseColorAButton, pulseColorBButton, pulseColorATex, pulseColorBTex, pulseAOpacitySlider, pulseBOpacitySlider
+local pulseColorAButton, pulseColorBButton, pulseColorATex, pulseColorBTex, pulseAOpacitySlider, pulseBOpacitySlider, pulseSpeedSlider, pulseColorALabel, pulseColorBLabel, pulseAOpacityLabel, pulseBOpacityLabel
+local rotationEnableCheckbox, rotationColor1Button, rotationColor2Button, rotationColor1Tex, rotationColor2Tex, rotOpacity1Slider, rotOpacity2Slider, rotColor1Label, rotColor2Label, rotOpacity1Label, rotOpacity2Label, rotSpeedLabel
 
 local function UpdatePulseUIState()
     if SMC_Settings.enableMainRingPulse then
@@ -368,6 +382,18 @@ local function UpdatePulseUIState()
     end
     -- Enable/disable pulse colour controls
     local enabled = SMC_Settings.enableMainRingPulse and true or false
+
+
+    -- Grey out related labels when pulse is disabled
+    SetLabelEnabled(pulseColorALabel, enabled)
+    SetLabelEnabled(pulseColorBLabel, enabled)
+    SetLabelEnabled(pulseAOpacityLabel, enabled)
+    SetLabelEnabled(pulseBOpacityLabel, enabled)
+    -- Mutually exclusive toggles
+    if rotationEnableCheckbox then
+        SetCheckboxEnabled(rotationEnableCheckbox, (not enabled))
+        rotationEnableCheckbox:SetAlpha(1)
+    end
 
     if pulseColorAButton then
         pulseColorAButton:SetEnabled(enabled)
@@ -384,6 +410,12 @@ local function UpdatePulseUIState()
     if pulseBOpacitySlider then
         pulseBOpacitySlider:SetEnabled(enabled)
         pulseBOpacitySlider:SetAlpha(enabled and 1 or 0.35)
+    end
+
+    -- Pulse speed should only be adjustable when pulse is enabled
+    if pulseSpeedSlider then
+        pulseSpeedSlider:SetEnabled(enabled)
+        pulseSpeedSlider:SetAlpha(enabled and 1 or 0.35)
     end
 end
 
@@ -439,12 +471,13 @@ end
 
 
 -- Color swatch A
-local pulseColorALabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+pulseColorALabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 pulseColorALabel:SetPoint("TOPLEFT", pulseEnableCheckbox, "BOTTOMLEFT", 4, -10)
 pulseColorALabel:SetText("Pulse Color A")
 
 pulseColorAButton = CreateFrame("Button", "SMC_MainRingPulseColorAButton", content, "UIPanelButtonTemplate")
-pulseColorAButton:SetSize(26, 18)
+-- Match the visual footprint of the Rotation color swatches for consistency
+pulseColorAButton:SetSize(40, 20)
 pulseColorAButton:SetPoint("LEFT", pulseColorALabel, "RIGHT", 12, 0)
 pulseColorAButton:SetText("")
 
@@ -466,7 +499,7 @@ pulseColorAButton:SetScript("OnClick", function()
 end)
 
 -- Pulse A opacity slider (we manage alpha ourselves; see note in OpenRGBAColorPicker)
-local pulseAOpacityLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+pulseAOpacityLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 pulseAOpacityLabel:SetPoint("LEFT", pulseColorAButton, "RIGHT", 10, 0)
 pulseAOpacityLabel:SetText("Opacity")
 
@@ -506,12 +539,13 @@ end)
 
 
 -- Color swatch B
-local pulseColorBLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
+pulseColorBLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 pulseColorBLabel:SetPoint("TOPLEFT", pulseColorALabel, "BOTTOMLEFT", 0, -10)
 pulseColorBLabel:SetText("Pulse Color B")
 
 pulseColorBButton = CreateFrame("Button", "SMC_MainRingPulseColorBButton", content, "UIPanelButtonTemplate")
-pulseColorBButton:SetSize(26, 18)
+-- Match the visual footprint of the Rotation color swatches for consistency
+pulseColorBButton:SetSize(40, 20)
 pulseColorBButton:SetPoint("LEFT", pulseColorBLabel, "RIGHT", 12, 0)
 pulseColorBButton:SetText("")
 
@@ -533,7 +567,7 @@ pulseColorBButton:SetScript("OnClick", function()
 end)
 
 -- Pulse B opacity slider (we manage alpha ourselves; see note in OpenRGBAColorPicker)
-local pulseBOpacityLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+pulseBOpacityLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
 pulseBOpacityLabel:SetPoint("LEFT", pulseColorBButton, "RIGHT", 10, 0)
 pulseBOpacityLabel:SetText("Opacity")
 
@@ -573,7 +607,7 @@ end)
 
 
 -- Pulse speed slider
-local pulseSpeedSlider = CreateFrame("Slider", "SMC_MainRingPulseSpeedSlider", content, "OptionsSliderTemplate")
+pulseSpeedSlider = CreateFrame("Slider", "SMC_MainRingPulseSpeedSlider", content, "OptionsSliderTemplate")
 pulseSpeedSlider:SetPoint("TOPLEFT", pulseColorBLabel, "BOTTOMLEFT", -2, -22)
 pulseSpeedSlider:SetWidth(220)
 pulseSpeedSlider:SetMinMaxValues(0.25, 3.0)
@@ -589,8 +623,243 @@ pulseSpeedSlider:SetScript("OnValueChanged", function(self, value)
     SMC:ApplySettings()
 end)
 
+
+    local function RefreshRotationSwatches()
+        -- Ensure rotation colors always have a sane alpha (defaults should be 100%).
+        SMC_Settings.mainRingRotColor1 = SMC_Settings.mainRingRotColor1 or { r = 1, g = 1, b = 1, a = 1 }
+        SMC_Settings.mainRingRotColor2 = SMC_Settings.mainRingRotColor2 or { r = 1, g = 1, b = 1, a = 1 }
+        if SMC_Settings.mainRingRotColor1.a == nil then SMC_Settings.mainRingRotColor1.a = 1 end
+        -- Allow 0 alpha (0%) for users who want the rotation layer fully transparent.
+        -- Only normalise nil -> 1 (100%).
+        if SMC_Settings.mainRingRotColor2.a == nil then SMC_Settings.mainRingRotColor2.a = 1 end
+
+        local c1 = SMC_Settings.mainRingRotColor1
+        local c2 = SMC_Settings.mainRingRotColor2
+        rotColor1Tex:SetColorTexture(c1.r or 1, c1.g or 1, c1.b or 1, c1.a or 1)
+        rotColor2Tex:SetColorTexture(c2.r or 1, c2.g or 1, c2.b or 1, c2.a or 1)
+    end
+
+    -- Main Ring Rotation
+    local rotationSeparator = CreateSeparator(content, "Main Ring Rotation", "TOPLEFT", pulseSpeedSlider, 0, -35)
+
+    rotationEnableCheckbox = CreateFrame("CheckButton", "SMC_MainRingRotationEnableCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
+    rotationEnableCheckbox:SetPoint("TOPLEFT", rotationSeparator, "BOTTOMLEFT", 0, -10)
+    _G[rotationEnableCheckbox:GetName() .. "Text"]:SetText("Enable Main Ring Rotation")
+    rotationEnableCheckbox:SetChecked(SMC_Settings.enableMainRingRotation)
+
+    rotColor1Label = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    rotColor1Label:SetPoint("TOPLEFT", rotationEnableCheckbox, "BOTTOMLEFT", 0, -10)
+    rotColor1Label:SetText("Rotation Color A")
+
+    rotColor1Button = CreateFrame("Button", nil, content, "BackdropTemplate")
+    rotColor1Button:SetSize(40, 20)
+    rotColor1Button:SetPoint("LEFT", rotColor1Label, "RIGHT", 10, 0)
+rotColor1Button:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 10,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    })
+    rotColor1Button:SetBackdropColor(0.12, 0.12, 0.12, 1)
+    rotColor1Button:SetBackdropBorderColor(0.45, 0.45, 0.45, 1)
+
+    rotColor1Tex = rotColor1Button:CreateTexture(nil, "ARTWORK")
+    rotColor1Tex:SetAllPoints()
+    rotColor1Tex:SetColorTexture(1, 1, 1, 1)
+
+    -- Rotation Color 1 opacity slider
+    rotOpacity1Label = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    rotOpacity1Label:SetPoint("LEFT", rotColor1Button, "RIGHT", 10, 0)
+    rotOpacity1Label:SetText("Opacity")
+
+    rotOpacity1Slider = CreateFrame("Slider", "SMC_RotationOpacity1Slider", content, "OptionsSliderTemplate")
+    rotOpacity1Slider:SetPoint("LEFT", rotOpacity1Label, "RIGHT", 8, 0)
+    rotOpacity1Slider:SetMinMaxValues(0, 1)
+    rotOpacity1Slider:SetValueStep(0.01)
+    rotOpacity1Slider:SetObeyStepOnDrag(true)
+    rotOpacity1Slider:SetWidth(140)
+    _G[rotOpacity1Slider:GetName().."Low"]:SetText("0%")
+    _G[rotOpacity1Slider:GetName().."High"]:SetText("100%")
+
+    local function UpdateRotOpacity1Text(val)
+        local pct = math.floor((val or 0) * 100 + 0.5)
+        _G[rotOpacity1Slider:GetName() .. "Text"]:SetText(string.format("%d%%", pct))
+    end
+
+    -- Initialise value + label (OptionsSliderTemplate won't show % text unless we set it)
+    local initRotA = (SMC_Settings.mainRingRotColor1 and SMC_Settings.mainRingRotColor1.a) or 1
+    rotOpacity1Slider:SetValue(initRotA)
+    UpdateRotOpacity1Text(initRotA)
+
+    rotOpacity1Slider:SetScript("OnValueChanged", function(self, value)
+        SMC_Settings.mainRingRotColor1 = SMC_Settings.mainRingRotColor1 or { r = 1, g = 1, b = 1, a = 1 }
+        SMC_Settings.mainRingRotColor1.a = value
+        UpdateRotOpacity1Text(value)
+        RefreshRotationSwatches()
+        SMC:ApplySettings()
+    end)
+
+
+    rotColor2Label = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    rotColor2Label:SetPoint("TOPLEFT", rotColor1Label, "BOTTOMLEFT", 0, -10)
+    rotColor2Label:SetText("Rotation Color B")
+
+    rotColor2Button = CreateFrame("Button", nil, content, "BackdropTemplate")
+    rotColor2Button:SetSize(40, 20)
+    rotColor2Button:SetPoint("LEFT", rotColor2Label, "RIGHT", 10, 0)
+rotColor2Button:SetBackdrop({
+        bgFile = "Interface\\Buttons\\WHITE8x8",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 10,
+        insets = { left = 2, right = 2, top = 2, bottom = 2 },
+    })
+    rotColor2Button:SetBackdropColor(0.12, 0.12, 0.12, 1)
+    rotColor2Button:SetBackdropBorderColor(0.45, 0.45, 0.45, 1)
+
+    rotColor2Tex = rotColor2Button:CreateTexture(nil, "ARTWORK")
+    rotColor2Tex:SetAllPoints()
+    rotColor2Tex:SetColorTexture(1, 1, 1, 1)
+    RefreshRotationSwatches()
+
+    -- Rotation Color 2 opacity slider
+    rotOpacity2Label = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    rotOpacity2Label:SetPoint("LEFT", rotColor2Button, "RIGHT", 10, 0)
+    rotOpacity2Label:SetText("Opacity")
+
+    rotOpacity2Slider = CreateFrame("Slider", "SMC_RotationOpacity2Slider", content, "OptionsSliderTemplate")
+    rotOpacity2Slider:SetPoint("LEFT", rotOpacity2Label, "RIGHT", 8, 0)
+    rotOpacity2Slider:SetMinMaxValues(0, 1)
+    rotOpacity2Slider:SetValueStep(0.01)
+    rotOpacity2Slider:SetObeyStepOnDrag(true)
+    rotOpacity2Slider:SetWidth(140)
+    _G[rotOpacity2Slider:GetName().."Low"]:SetText("0%")
+    _G[rotOpacity2Slider:GetName().."High"]:SetText("100%")
+
+    local function UpdateRotOpacity2Text(val)
+        local pct = math.floor((val or 0) * 100 + 0.5)
+        _G[rotOpacity2Slider:GetName() .. "Text"]:SetText(string.format("%d%%", pct))
+    end
+
+    -- Initialise value + label (default should be 100%)
+    local initRotB = (SMC_Settings.mainRingRotColor2 and SMC_Settings.mainRingRotColor2.a)
+    if initRotB == nil then initRotB = 1 end
+    rotOpacity2Slider:SetValue(initRotB)
+    UpdateRotOpacity2Text(initRotB)
+
+    rotOpacity2Slider:SetScript("OnValueChanged", function(self, value)
+        SMC_Settings.mainRingRotColor2 = SMC_Settings.mainRingRotColor2 or { r = 1, g = 1, b = 1, a = 1 }
+        SMC_Settings.mainRingRotColor2.a = value
+        UpdateRotOpacity2Text(value)
+        RefreshRotationSwatches()
+        SMC:ApplySettings()
+    end)
+
+
+    RefreshRotationSwatches()
+
+    rotSpeedLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormalSmall")
+    rotSpeedLabel:SetPoint("TOPLEFT", rotColor2Label, "BOTTOMLEFT", 0, -18)
+    rotSpeedLabel:SetText("Rotation Speed")
+
+    rotSpeedValue = content:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+    rotSpeedValue:SetPoint("LEFT", rotSpeedLabel, "RIGHT", 10, 0)
+
+    rotSpeedSlider = CreateFrame("Slider", "SMC_MainRingRotSpeedSlider", content, "OptionsSliderTemplate")
+    rotSpeedSlider:SetPoint("TOPLEFT", rotSpeedLabel, "BOTTOMLEFT", 0, -10)
+    rotSpeedSlider:SetMinMaxValues(0.1, 5.0)
+    rotSpeedSlider:SetValueStep(0.1)
+    rotSpeedSlider:SetObeyStepOnDrag(true)
+    rotSpeedSlider:SetWidth(220)
+
+    local function UpdateRotSpeedText(value)
+        rotSpeedValue:SetText(string.format("%.1fx", value))
+    end
+
+    rotSpeedSlider:SetValue(SMC_Settings.mainRingRotSpeed or 1.0)
+    UpdateRotSpeedText(SMC_Settings.mainRingRotSpeed or 1.0)
+
+    local function UpdateRotationUIState()
+        -- Rotation conflicts with main ring class color, so disable the option when rotation is enabled.
+        if SMC_Settings.enableMainRingRotation then
+            SMC_Settings.useMainRingClassColor = false
+            if mainRingClassCheckbox then
+                mainRingClassCheckbox:SetChecked(false)
+                SetCheckboxEnabled(mainRingClassCheckbox, false)
+            end
+        else
+            if mainRingClassCheckbox then
+                SetCheckboxEnabled(mainRingClassCheckbox, true)
+            end
+        end
+        local enabled = SMC_Settings.enableMainRingRotation and true or false
+
+
+        -- Grey out related labels when rotation is disabled
+        SetLabelEnabled(rotColor1Label, enabled)
+        SetLabelEnabled(rotColor2Label, enabled)
+        SetLabelEnabled(rotOpacity1Label, enabled)
+        SetLabelEnabled(rotOpacity2Label, enabled)
+        SetLabelEnabled(rotSpeedLabel, enabled)
+        if pulseEnableCheckbox then
+            SetCheckboxEnabled(pulseEnableCheckbox, (not enabled))
+            pulseEnableCheckbox:SetAlpha(1)
+        end
+        rotColor1Button:SetEnabled(enabled)
+        rotColor1Button:SetAlpha(enabled and 1 or 0.35)
+        rotColor2Button:SetEnabled(enabled)
+        rotColor2Button:SetAlpha(enabled and 1 or 0.35)
+        rotSpeedSlider:SetEnabled(enabled)
+        rotSpeedSlider:SetAlpha(enabled and 1 or 0.35)
+        if rotOpacity1Slider then rotOpacity1Slider:SetEnabled(enabled); rotOpacity1Slider:SetAlpha(enabled and 1 or 0.35) end
+        if rotOpacity2Slider then rotOpacity2Slider:SetEnabled(enabled); rotOpacity2Slider:SetAlpha(enabled and 1 or 0.35) end
+    end
+    UpdateRotationUIState()
+
+    rotationEnableCheckbox:SetScript("OnClick", function(self)
+        SMC_Settings.enableMainRingRotation = self:GetChecked()
+        -- Rotation and pulse are mutually exclusive
+        if SMC_Settings.enableMainRingRotation then
+            SMC_Settings.enableMainRingPulse = false
+        end
+        UpdateRotationUIState()
+        SMC:ApplySettings()
+    end)
+
+    rotColor1Button:SetScript("OnClick", function()
+        SMC_Settings.mainRingRotColor1 = SMC_Settings.mainRingRotColor1 or { r = 1, g = 1, b = 1, a = 1 }
+        OpenRGBAColorPicker(SMC_Settings.mainRingRotColor1, function(r, g, b, a)
+            local c = SMC_Settings.mainRingRotColor1
+            c.r, c.g, c.b = r, g, b
+            c.a = c.a or 1 -- alpha controlled by slider
+            RefreshRotationSwatches()
+            SMC:ApplySettings()
+        end)
+    end)
+
+    rotColor2Button:SetScript("OnClick", function()
+        SMC_Settings.mainRingRotColor2 = SMC_Settings.mainRingRotColor2 or { r = 1, g = 1, b = 1, a = 1 }
+        OpenRGBAColorPicker(SMC_Settings.mainRingRotColor2, function(r, g, b, a)
+            local c = SMC_Settings.mainRingRotColor2
+            c.r, c.g, c.b = r, g, b
+            c.a = c.a or 1 -- alpha controlled by slider
+            RefreshRotationSwatches()
+            SMC:ApplySettings()
+        end)
+    end)
+
+    rotSpeedSlider:SetScript("OnValueChanged", function(self, value)
+        SMC_Settings.mainRingRotSpeed = value
+        UpdateRotSpeedText(value)
+        SMC:ApplySettings()
+    end)
+
+
 pulseEnableCheckbox:SetScript("OnClick", function(self)
     SMC_Settings.enableMainRingPulse = self:GetChecked()
+        -- Pulse and rotation are mutually exclusive
+        if SMC_Settings.enableMainRingPulse then
+            SMC_Settings.enableMainRingRotation = false
+        end
     UpdatePulseUIState()
     SMC:ApplySettings()
 end)
@@ -598,7 +867,7 @@ end)
 UpdatePulseUIState()
     
     -- 3. Mouse Trail
-    local trailSeparator = CreateSeparator(content, "Mouse Trail", "TOPLEFT", pulseSpeedSlider, 0, -35)
+    local trailSeparator = CreateSeparator(content, "Mouse Trail", "TOPLEFT", rotSpeedSlider, 0, -35)
     
     local enableTrailCheckbox = CreateFrame("CheckButton", "SMC_EnableTrailCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     enableTrailCheckbox:SetPoint("TOPLEFT", trailSeparator, "BOTTOMLEFT", 0, -15)
@@ -880,6 +1149,37 @@ UpdatePulseUIState()
         if pulseSpeedSlider then pulseSpeedSlider:SetValue(SMC_Settings.mainRingPulseSpeed or 1.0) end
         if pulseSpeedValue then pulseSpeedValue:SetText(string.format("%.1fx", SMC_Settings.mainRingPulseSpeed or 1.0)) end
         if UpdatePulseUIState then UpdatePulseUIState() end
+
+-- Refresh rotation swatches + sliders
+if rotationEnableCheckbox then rotationEnableCheckbox:SetChecked(SMC_Settings.enableMainRingRotation) end
+if rotationColor1Tex then
+    local c = SMC_Settings.mainRingRotColor1 or { r = 1, g = 1, b = 1, a = 1 }
+    rotationColor1Tex:SetColorTexture(c.r or 1, c.g or 1, c.b or 1, c.a or 1)
+end
+if rotationColor2Tex then
+    local c = SMC_Settings.mainRingRotColor2 or { r = 1, g = 1, b = 1, a = 1 }
+    rotationColor2Tex:SetColorTexture(c.r or 1, c.g or 1, c.b or 1, c.a or 1)
+end
+if rotOpacity1Slider then
+    local a = (SMC_Settings.mainRingRotColor1 and SMC_Settings.mainRingRotColor1.a) or 1
+    rotOpacity1Slider:SetValue(a)
+    local name = rotOpacity1Slider:GetName()
+    if name and _G[name .. "Text"] then
+        _G[name .. "Text"]:SetText(string.format("%d%%", math.floor(a * 100 + 0.5)))
+    end
+end
+if rotOpacity2Slider then
+    local a = (SMC_Settings.mainRingRotColor2 and SMC_Settings.mainRingRotColor2.a) or 1
+    rotOpacity2Slider:SetValue(a)
+    local name = rotOpacity2Slider:GetName()
+    if name and _G[name .. "Text"] then
+        _G[name .. "Text"]:SetText(string.format("%d%%", math.floor(a * 100 + 0.5)))
+    end
+end
+if rotSpeedSlider then rotSpeedSlider:SetValue(SMC_Settings.mainRingRotSpeed or 1.0) end
+if rotSpeedValue then rotSpeedValue:SetText(string.format("%.1fx", SMC_Settings.mainRingRotSpeed or 1.0)) end
+if UpdateRotationUIState then UpdateRotationUIState() end
+
         gcdClassCheckbox:SetChecked(SMC_Settings.useGCDClassColor)
         castClassCheckbox:SetChecked(SMC_Settings.useCastClassColor)
         enableTrailCheckbox:SetChecked(SMC_Settings.enableTrail)
@@ -900,7 +1200,15 @@ UpdatePulseUIState()
         transparencySlider:SetValue(SMC_Settings.transparency)
         transparencyValue:SetText(string.format("%.0f%%", SMC_Settings.transparency * 100))
 	UIDropDownMenu_SetText(strataDropdown, SMC_Settings.frameStrata or "BACKGROUND")
-        SMC:ApplySettings()
+        
+        -- Rotation UI refresh (after defaults copy)
+        if rotationEnableCheckbox then rotationEnableCheckbox:SetChecked(SMC_Settings.enableMainRingRotation) end
+        if rotSpeedSlider then rotSpeedSlider:SetValue(SMC_Settings.mainRingRotSpeed or 1.0) end
+        if rotSpeedValue then rotSpeedValue:SetText(string.format("%.1fx", SMC_Settings.mainRingRotSpeed or 1.0)) end
+        if RefreshRotationSwatches then RefreshRotationSwatches() end
+        if UpdateRotationUIState then UpdateRotationUIState() end
+
+SMC:ApplySettings()
         print("|cff00ff00SMC:|r Settings reset to defaults.")
     end)
     
