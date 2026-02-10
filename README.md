@@ -1,105 +1,87 @@
-# Simple Mouse Cursor
+### **🖱️ Simple Mouse Cursor**
 
-**Simple Mouse Cursor** is a lightweight, standalone addon that improves cursor visibility during gameplay by displaying customizable rings, indicators, and optional effects around your mouse cursor.
+**Simple Mouse Cursor** is a stand-alone addon based on a popular WeakAura concept, rebuilt for performance, reliability, and **zero external dependencies**.
 
-Originally inspired by a popular WeakAura concept, it was rebuilt from scratch as a more performant and reliable addon with **zero dependencies**.
+It displays customizable rings, indicators, and effects around your cursor — helping you instantly locate it in combat while showing GCD, casting, and more.
 
-<p align="center">
-  <img src="Image/logo.png" width="256" alt="Simple Mouse Cursor Logo">
-</p>
+Lightweight. No code warnings. No setup required.
 
-## ✨ Features
+***
 
-### 🔵 Core Cursor Rings
-- **Main (Middle) Ring** — always-visible cursor highlight
-- **Inner Ring** — global cooldown progress
-- **Outer Ring** — casting/channeling progress
-- **Cursor Trail** — optional animated trail following cursor movement
+## **Support & Community**
 
-### 🎨 Customisation
-- Class-coloured support for:
-  - GCD ring
-  - Main ring
-  - Cast ring
-  - Cursor trail
-- Power-type colour option for the power ring
-- Adjustable:
-  - Trail density
-  - Trail duration
-  - Trail scale
-  - Cursor ring scale
-  - Frame strata (layering)
-
-### 🎯 Reticle Options
-- Multiple styles: dot, chevron, crosshair, ring, X, diamond, and more
-- Adjustable reticle size
-- Optional class-coloured reticle
-
-### 👁 Visibility Controls
-- Show rings only while in combat
-- Modifier-based actions (Shift, Ctrl, Alt), each configurable:
-  - Show Rings
-  - Ping with Ring
-  - Ping with Area
-  - Ping with Crosshair
-  - Show Crosshair
-
-## 🧩 Compatibility
-- **Game:** Retail
-- **The War Within:** Supported
-- **Midnight Beta:** Supported  
-  *(GCD, Health, and Power tracking temporarily disabled)*
-- Works with all UI replacements
-- Resolution-independent (1080p → 4K+)
-
-## 📦 Install
-### CurseForge
-- Install via the CurseForge app or download the latest release.
-
-### Manual
-1. Download the latest release `.zip`.
-2. Extract into: `World of Warcraft/_retail_/Interface/AddOns/`
-3. Ensure the folder name is `SimpleMouseCursor` (not nested).
-4. Relaunch the game.
-
-## ⚙️ Configuration
-Open the options in-game:
-
-`Esc → Options → AddOns → Simple Mouse Cursor`
-
-All settings update instantly (no reload required), including:
-- Ring selection and visibility
-- Colours
-- Trail properties
-- Modifier actions
-- Reticle type, scale, and colour
-- Frame strata
-- And more
-
-## 🧩 Roadmap
-- Additional reticle styles
-- Profile-based settings
-- Preset themes (minimal, thick rings, neon, etc.)
-- Optional sound for ping actions
-- Localisation support
-
-## 🤝 Contributing
-Contributions are welcome!
-
-### Development Setup
-1. Clone the repository
-2. Copy/symlink the addon folder into your `AddOns` directory
-3. Restart WoW or `/reload`
-4. Start hacking 😄
-
-## 💬 Support & Community
 For bug reports, feature requests, release notes, and beta builds, join the official Discord:
 
 **LanniOfAlonsus • Addon Hub**  
-https://discord.gg/U8mKfHpeeP
+[https://discord.gg/U8mKfHpeeP](https://discord.gg/U8mKfHpeeP)
+
+***
+
+## ⭐ Main Features
+
+### ✔ Compatible with both **The War Within (Retail)** and **Midnight**
+
+Works out of the box on both versions with no configuration required.
+
+### ✔ Cursor Rings
+
+*   **Main (Middle) Ring:** A static highlight that helps you track your cursor during intense gameplay
+*   **Inner Ring:** Displays your **global cooldown**
+*   **Outer Ring:** Shows your **cast** or **channel** progress
+*   **Cursor Trail:** Optional animated trail that follows your cursor
+
+***
+
+## 🎨 Color & Appearance Customization
+
+*   Use **class colours** for:
+    *   GCD ring
+    *   Main ring
+    *   Cast ring
+    *   Cursor trail
+*   NEW: Optional **Main Ring Pulse** effect with:
+    *   Dual pulse colours (**A / B**)
+    *   Adjustable **opacity**
+    *   Adjustable **pulse speed**
+    *   Credit aspiringnobody for the request, visuals and example code  
+*   NEW: Optional **Main Ring Rotation** effect with:
+    *   Dual rotation colours (**1 / 2**)
+    *   Adjustable **opacity**
+    *   Adjustable **rotation speed**
+    *   Credit aspiringnobody for the request, visuals and example code 
+*   Use **power type colours** for the Power ring instead of the default blue
+*   Adjust cursor trail **density**, **duration**, and **scale**
+*   Adjustable **cursor ring scale**
+*   Adjustable **frame strata (layering)** so the cursor overlay can be forced above or below UI elements
+
+***
+
+## 🎯 Reticle Options
+
+*   Choose from multiple reticle styles (dot, chevron, crosshair, ring, etc.)
+*   Adjust **reticle size**
+*   Tint the reticle using **class colour**
+
+***
+
+## 👁️ Visibility Controls
+
+*   Option to **show the cursor rings only while in combat**
+*   Individual visibility behaviour based on modifier keys (**Shift**, **Ctrl**, **Alt**)
+
+### Modifier Actions
+
+Each modifier can have its own action:
+
+1.  **Show Rings** — Temporarily show all rings while the key is held
+2.  **Ping with Ring** — Brief ring highlight at the cursor location
+3.  **Ping with Area** — Bright solid spotlight on your cursor
+4.  **Ping with Crosshair** — Large screen-wide crosshair pulses from your cursor
+5.  **Show Crosshair** — Display the crosshair for as long as the modifier is held
+
+***
 
 ## 📜 License
-All Rights Reserved.
 
-## ❤️ Credits
-- **Author:** LanniOfAlonsus
+**All Rights Reserved.**  
+Personal use is allowed. Redistribution or modified uploads are not permitted.
