@@ -24,6 +24,7 @@ SMC.defaults = {
     usePowerColors = false,
     useMainRingClassColor = false,
     enableMainRingPulse = false,
+    enableMainRingRotation = false,
     mainRingPulseColorA = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
     mainRingPulseColorB = { r = 1.0, g = 1.0, b = 1.0, a = 1.0 },
     mainRingPulseSpeed = 1.0,
@@ -298,7 +299,7 @@ function SMC:CreateSettingsPanel()
     
     local mainRingClassCheckbox = CreateFrame("CheckButton", "SMC_MainRingClassCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
     mainRingClassCheckbox:SetPoint("TOPLEFT", reticleClassCheckbox, "BOTTOMLEFT", 0, -5)
-    _G[mainRingClassCheckbox:GetName() .. "Text"]:SetText("Use Class Color for Main Ring (Disabled if Pulse enabled)")
+    _G[mainRingClassCheckbox:GetName() .. "Text"]:SetText("Use Class Color for Main Ring (Disabled if Pulse/Rotation enabled)")
     mainRingClassCheckbox:SetChecked(SMC_Settings.useMainRingClassColor)
     mainRingClassCheckbox:SetScript("OnClick", function(self)
         SMC_Settings.useMainRingClassColor = self:GetChecked()
@@ -341,6 +342,13 @@ pulseEnableCheckbox:SetPoint("TOPLEFT", pulseSeparator, "BOTTOMLEFT", 0, -12)
 _G[pulseEnableCheckbox:GetName() .. "Text"]:SetText("Enable Main Ring Pulse")
 pulseEnableCheckbox:SetChecked(SMC_Settings.enableMainRingPulse)
 
+-- Main Ring Rotation Checkbox
+local rotEnableCheckbox = CreateFrame("CheckButton", "SMC_MainRingRotEnableCheckbox", content, "InterfaceOptionsCheckButtonTemplate")
+rotEnableCheckbox:SetPoint("LEFT", pulseEnableCheckbox, "RIGHT", 160, 0)
+_G[rotEnableCheckbox:GetName() .. "Text"]:SetText("Enable Main Ring Rotation")
+rotEnableCheckbox:SetChecked(SMC_Settings.enableMainRingRotation)
+
+
 local function SetCheckboxEnabled(cb, enabled)
     if enabled then
         cb:Enable()
@@ -358,16 +366,18 @@ local pulseColorAButton, pulseColorBButton, pulseAOpacitySlider, pulseBOpacitySl
 local pulseColorAButton, pulseColorBButton, pulseColorATex, pulseColorBTex, pulseAOpacitySlider, pulseBOpacitySlider
 
 local function UpdatePulseUIState()
-    if SMC_Settings.enableMainRingPulse then
-        -- Pulse overrides main ring coloring, so disable class-color option to avoid confusion.
-        SMC_Settings.useMainRingClassColor = false
-        mainRingClassCheckbox:SetChecked(false)
+    local isPulseEnabled = SMC_Settings.enableMainRingPulse
+    local isRotationEnabled = SMC_Settings.enableMainRingRotation
+    local isAnyEffectEnabled = isPulseEnabled or isRotationEnabled
+
+    -- If pulse or rotation are active, disable the class color checkbox so the player can't enable it.
+    if isAnyEffectEnabled then
         SetCheckboxEnabled(mainRingClassCheckbox, false)
     else
         SetCheckboxEnabled(mainRingClassCheckbox, true)
     end
-    -- Enable/disable pulse colour controls
-    local enabled = SMC_Settings.enableMainRingPulse and true or false
+
+    local enabled = isAnyEffectEnabled
 
     if pulseColorAButton then
         pulseColorAButton:SetEnabled(enabled)
@@ -385,7 +395,14 @@ local function UpdatePulseUIState()
         pulseBOpacitySlider:SetEnabled(enabled)
         pulseBOpacitySlider:SetAlpha(enabled and 1 or 0.35)
     end
+    if pulseSpeedSlider then
+        pulseSpeedSlider:SetEnabled(enabled)
+        pulseSpeedSlider:SetAlpha(enabled and 1 or 0.35)
+    end
 end
+
+UpdatePulseUIState()
+
 
 -- Small helper to open the Blizzard color picker (includes alpha)
 -- Small helper to open the Blizzard color picker (RGB only).
@@ -441,7 +458,7 @@ end
 -- Color swatch A
 local pulseColorALabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 pulseColorALabel:SetPoint("TOPLEFT", pulseEnableCheckbox, "BOTTOMLEFT", 4, -10)
-pulseColorALabel:SetText("Pulse Color A")
+pulseColorALabel:SetText("Pulse/Rotation Color A")
 
 pulseColorAButton = CreateFrame("Button", "SMC_MainRingPulseColorAButton", content, "UIPanelButtonTemplate")
 pulseColorAButton:SetSize(26, 18)
@@ -501,14 +518,13 @@ pulseAOpacitySlider:SetScript("OnValueChanged", function(self, value)
         SMC_Settings.mainRingPulseColorA.b,
         value
     )
-    SMC:ApplySettings()
 end)
 
 
 -- Color swatch B
 local pulseColorBLabel = content:CreateFontString(nil, "ARTWORK", "GameFontNormal")
 pulseColorBLabel:SetPoint("TOPLEFT", pulseColorALabel, "BOTTOMLEFT", 0, -10)
-pulseColorBLabel:SetText("Pulse Color B")
+pulseColorBLabel:SetText("Pulse/Rotation Color B")
 
 pulseColorBButton = CreateFrame("Button", "SMC_MainRingPulseColorBButton", content, "UIPanelButtonTemplate")
 pulseColorBButton:SetSize(26, 18)
@@ -568,7 +584,6 @@ pulseBOpacitySlider:SetScript("OnValueChanged", function(self, value)
         SMC_Settings.mainRingPulseColorB.b,
         value
     )
-    SMC:ApplySettings()
 end)
 
 
@@ -582,15 +597,40 @@ pulseSpeedSlider:SetObeyStepOnDrag(true)
 pulseSpeedSlider:SetValue(SMC_Settings.mainRingPulseSpeed or 1.0)
 _G[pulseSpeedSlider:GetName() .. "Low"]:SetText("0.25")
 _G[pulseSpeedSlider:GetName() .. "High"]:SetText("3.0")
-_G[pulseSpeedSlider:GetName() .. "Text"]:SetText("Pulse Speed")
+_G[pulseSpeedSlider:GetName() .. "Text"]:SetText("Pulse/Rotation Speed")
 
 pulseSpeedSlider:SetScript("OnValueChanged", function(self, value)
     SMC_Settings.mainRingPulseSpeed = value
-    SMC:ApplySettings()
 end)
 
 pulseEnableCheckbox:SetScript("OnClick", function(self)
+    if self:GetChecked() then
+        -- Disable Rotation
+        rotEnableCheckbox:SetChecked(false)
+        SMC_Settings.enableMainRingRotation = false
+
+        -- Disable Class Color
+        SMC_Settings.useMainRingClassColor = false
+        mainRingClassCheckbox:SetChecked(false)
+    end
+
     SMC_Settings.enableMainRingPulse = self:GetChecked()
+    UpdatePulseUIState()
+    SMC:ApplySettings()
+end)
+
+rotEnableCheckbox:SetScript("OnClick", function(self)
+    if self:GetChecked() then
+        -- Disable Pulse
+        pulseEnableCheckbox:SetChecked(false)
+        SMC_Settings.enableMainRingPulse = false
+
+        -- Disable Class Color
+        SMC_Settings.useMainRingClassColor = false
+        mainRingClassCheckbox:SetChecked(false)
+    end
+
+    SMC_Settings.enableMainRingRotation = self:GetChecked()
     UpdatePulseUIState()
     SMC:ApplySettings()
 end)

@@ -145,6 +145,40 @@ function SMC:UpdateMainRingPulse()
     SMC_CursorFrame.MainRing:SetVertexColor(r, g, bl, al)
 end
 
+-- Rotate two colors around the main ring reusing the color settings from MainRingPulse for simplicity.
+function SMC:UpdateMainRingRotation()
+    if not SMC_Settings.enableMainRingRotation then 
+        return
+    end
+    
+    if not (SMC_CursorFrame and SMC_CursorFrame.MainRing and SMC_CursorFrame.MainRing:IsShown()) then
+        return
+    end
+    
+    if SMC_CursorFrame and SMC_CursorFrame.MainRing then
+        local speed = SMC_Settings.mainRingPulseSpeed or 1.0
+        local c1 = SMC_Settings.mainRingPulseColorA or { r = 1.0, g = 1.0, b = 1.0, a = 1.0 }
+        local c2 = SMC_Settings.mainRingPulseColorB or { r = 1.0, g = 1.0, b = 1.0, a = 1.0 }
+
+        local t = GetTime()
+        local angle = (t * -2 * speed) % (2 * math.pi)
+
+        SMC_CursorFrame.MainRing:SetRotation(angle)
+
+        local color1 = CreateColor(c1.r, c1.g, c1.b, c1.a)
+        local color2 = CreateColor(c2.r, c2.g, c2.b, c2.a)
+        SMC_CursorFrame.MainRing:SetGradient("HORIZONTAL", color1, color2)
+    end
+end
+
+function SMC:UpdateMainRing()
+    if SMC_Settings.enableMainRingPulse then
+        SMC:UpdateMainRingPulse()
+    elseif SMC_Settings.enableMainRingRotation then
+        SMC:UpdateMainRingRotation()
+    end
+end
+
 -- Update the central reticle texture, size, colour and visibility.
 function SMC:UpdateReticle()
     if not SMC_CursorFrame or not SMC_CursorFrame.Reticle then return end
@@ -289,7 +323,7 @@ function SMC:OnUpdate(elapsed)
 
     SMC:UpdateTrail(elapsed)
 
-    SMC:UpdateMainRingPulse()
+    SMC:UpdateMainRing()
 
     -- Modifier Key Logic
     local shiftDown = IsShiftKeyDown()
