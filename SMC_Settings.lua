@@ -892,6 +892,7 @@ UpdatePulseUIState()
         powerColorCheckbox:SetChecked(SMC_Settings.usePowerColors)
         mainRingClassCheckbox:SetChecked(SMC_Settings.useMainRingClassColor)
         if pulseEnableCheckbox then pulseEnableCheckbox:SetChecked(SMC_Settings.enableMainRingPulse) end
+        if rotEnableCheckbox then rotEnableCheckbox:SetChecked(SMC_Settings.enableMainRingRotation) end        
         -- Refresh pulse swatches + sliders
         if pulseColorATex then
             local c = SMC_Settings.mainRingPulseColorA or { r = 1, g = 1, b = 1, a = 1 }
