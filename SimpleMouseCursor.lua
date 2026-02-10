@@ -123,10 +123,6 @@ end
 
 -- Smoothly pulse the main ring between two configured colours (A → B → A).
 function SMC:UpdateMainRingPulse()
-    if not (SMC_Settings and SMC_Settings.enableMainRingPulse) then
-        return
-    end
-
     if not (SMC_CursorFrame and SMC_CursorFrame.MainRing and SMC_CursorFrame.MainRing:IsShown()) then
         return
     end
@@ -147,10 +143,6 @@ end
 
 -- Rotate two colors around the main ring reusing the color settings from MainRingPulse for simplicity.
 function SMC:UpdateMainRingRotation()
-    if not SMC_Settings.enableMainRingRotation then 
-        return
-    end
-    
     if not (SMC_CursorFrame and SMC_CursorFrame.MainRing and SMC_CursorFrame.MainRing:IsShown()) then
         return
     end
