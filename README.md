@@ -98,9 +98,8 @@ For bug reports, feature requests, release notes, and beta builds, join the offi
 **LanniOfAlonsus • Addon Hub**  
 https://discord.gg/U8mKfHpeeP
 
-## 📄 License
-MIT License.  
-See `LICENSE` for details.
+## 📜 License
+All Rights Reserved.
 
 ## ❤️ Credits
 - **Author:** LanniOfAlonsus
