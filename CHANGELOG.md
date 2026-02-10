@@ -20,3 +20,6 @@
 
 **Known issues:**  
 - None currently known.
+
+**Credits:**  
+- Thank you to aspiringnobody for the Feature requests and the example code/visuals
