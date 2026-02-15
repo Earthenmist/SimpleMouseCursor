@@ -1406,4 +1406,5 @@ function SMC:ApplySettings()
     SMC:UpdateRingColors()
     SMC:UpdateVisibility()
     SMC:UpdateReticle()
+    SMC:CacheRotationColors()
 end
