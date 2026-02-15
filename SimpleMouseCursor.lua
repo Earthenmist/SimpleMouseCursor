@@ -80,6 +80,9 @@ SMC.isCrosshairAnimating = false
 SMC.crosshairDuration = 1.5
 SMC.crosshairGap = 35 -- Radius of the ring (70/2)
 
+SMC.cachedRotColor1 = nil
+SMC.cachedRotColor2 = nil
+
 -- Return the RGB colour that should be used for the given ring type.
 function SMC:GetClassColor(ringType)
     local useClassColor = false
@@ -120,6 +123,15 @@ function SMC:UpdateRingColors()
     end
 end
 
+-- Cache the rotation colors to lower memory use in UpdateMainRingRotation
+function SMC:CacheRotationColors()
+    if SMC_Settings and CreateColor then
+        local c1 = SMC_Settings.mainRingRotColor1 or { r = 1, g = 1, b = 1, a = 1 }
+        local c2 = SMC_Settings.mainRingRotColor2 or { r = 1, g = 1, b = 1, a = 0 }
+        SMC.cachedRotColor1 = CreateColor(c1.r or 1, c1.g or 1, c1.b or 1, c1.a or 1)
+        SMC.cachedRotColor2 = CreateColor(c2.r or 1, c2.g or 1, c2.b or 1, c2.a or 1)
+    end
+end
 
 -- Smoothly pulse the main ring between two configured colours (A → B → A).
 function SMC:UpdateMainRingPulse()
@@ -166,12 +178,13 @@ function SMC:UpdateMainRingRotation()
         SMC_CursorFrame.MainRing:SetRotation(angle)
     end
 
-    if not SMC_Settings.enableMainRingPulse and SMC_CursorFrame.MainRing.SetGradient and CreateColor then
-        local c1 = SMC_Settings.mainRingRotColor1 or { r = 1, g = 1, b = 1, a = 1 }
-        local c2 = SMC_Settings.mainRingRotColor2 or { r = 1, g = 1, b = 1, a = 0 }
-        local color1 = CreateColor(c1.r or 1, c1.g or 1, c1.b or 1, c1.a or 1)
-        local color2 = CreateColor(c2.r or 1, c2.g or 1, c2.b or 1, c2.a or 1)
-        SMC_CursorFrame.MainRing:SetGradient("HORIZONTAL", color1, color2)
+    if not SMC_Settings.enableMainRingPulse and SMC_CursorFrame.MainRing.SetGradient then
+        if not SMC.cachedRotColor1 then
+            SMC:CacheRotationColors()
+        end
+        if SMC.cachedRotColor1 and SMC.cachedRotColor2 then
+            SMC_CursorFrame.MainRing:SetGradient("HORIZONTAL", SMC.cachedRotColor1, SMC.cachedRotColor2)
+        end
     end
 end
 
@@ -930,6 +943,8 @@ function SMC:SetupUI()
     SMC:UpdatePowerRing()
 
     SMC:InitializeTrail()
+
+    SMC:CacheRotationColors()
 
     if SMC.ApplySettings then
         SMC:ApplySettings()
