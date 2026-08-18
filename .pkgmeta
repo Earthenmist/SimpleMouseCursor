@@ -1,0 +1,14 @@
+package-as: SimpleMouseCursor
+
+manual-changelog: CHANGELOG.md
+
+license-output: LICENSE
+
+ignore:
+  - .github
+  - README.md
+  - CHANGELOG.md
+  - CHANGES.txt
+  - CONTRIBUTING.md
+  - SECURITY.md
+  - .gitignore

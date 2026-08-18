@@ -1,0 +1,29 @@
+<Ui xmlns="http://www.blizzard.com/wow/ui/"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.blizzard.com/wow/ui/ FrameXML.xsd">
+    
+    <Frame name="SMC_CursorFrame" parent="UIParent" hidden="false" enableMouse="false">
+        <Size x="40" y="40"/>
+        <Anchors/> 
+        
+        <Layers>
+            
+            <Layer level="OVERLAY"> 
+                <Texture parentKey="Reticle" file="Interface\Addons\SimpleMouseCursor\Image\Dot.tga">
+                    <Size x="10" y="10"/>
+                    <Anchors><Anchor point="CENTER"/></Anchors>
+                    <Color r="255" g="255" b="255" a="1.0"/> 
+                </Texture>
+            </Layer>
+            
+            <Layer level="OVERLAY"> 
+                <Texture parentKey="MainRing" file="Interface\Addons\SimpleMouseCursor\Image\Main.tga">
+                    <Size x="70" y="70"/> 
+                    <Anchors><Anchor point="CENTER"/></Anchors>
+                    <Color r="255" g="255" b="255" a="1.0"/> 
+                </Texture>
+            </Layer>
+        </Layers>
+    </Frame>
+        
+</Ui>
